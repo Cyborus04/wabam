@@ -1,6 +1,4 @@
-use crate::RefType;
-
-use super::{ValType, WasmEncode};
+use crate::{RefType, ValType, WasmEncode};
 
 #[doc(hidden)]
 #[macro_export]
