@@ -3,7 +3,7 @@ use crate::{encode::WasmEncode, tables::TableType, Limit, GlobalType};
 pub struct Import {
     pub module: String,
     pub name: String,
-    pub desc: ImportDescription,
+    pub desc: ImportDesc,
 }
 
 impl WasmEncode for Import {
@@ -18,16 +18,16 @@ impl WasmEncode for Import {
     }
 }
 
-pub enum ImportDescription {
+pub enum ImportDesc {
     Func { type_idx: u32 },
     Table { table_type: TableType },
     Memory { mem_type: Limit },
     Global { global_type: GlobalType },
 }
 
-impl WasmEncode for ImportDescription {
+impl WasmEncode for ImportDesc {
     fn size(&self) -> usize {
-        use ImportDescription::*;
+        use ImportDesc::*;
         1 + match self {
             Func { type_idx } => (*type_idx as u32).size(),
             Table { table_type } => table_type.size(),
@@ -37,7 +37,7 @@ impl WasmEncode for ImportDescription {
     }
 
     fn encode(&self, v: &mut Vec<u8>) {
-        use ImportDescription::*;
+        use ImportDesc::*;
         match self {
             Func { type_idx } => {
                 v.push(0);
