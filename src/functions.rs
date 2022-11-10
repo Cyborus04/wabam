@@ -86,10 +86,10 @@ impl WasmEncode for FuncType {
 #[macro_export]
 macro_rules! func_type {
     () => {
-        $crate::FuncType::default()
+        $crate::functions::FuncType::default()
     };
     ((param $($in:tt)*)) => {
-        $crate::FuncType {
+        $crate::functions::FuncType {
             inputs: vec![
                 $(
                     $crate::mlt!($in),
@@ -99,7 +99,7 @@ macro_rules! func_type {
         }
     };
     ((result $($out:tt)*)) => {
-        $crate::FuncType {
+        $crate::functions::FuncType {
             inputs: vec![],
             outputs: vec![
                 $(
@@ -109,7 +109,7 @@ macro_rules! func_type {
         }
     };
     ((param $($in:tt)*) (result $($out:tt)*)) => {
-        $crate::FuncType {
+        $crate::functions::FuncType {
             inputs: vec![
                 $(
                     $crate::mlt!($in),
