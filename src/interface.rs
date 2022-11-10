@@ -77,39 +77,39 @@ impl WasmEncode for Export {
 }
 
 pub enum ExportDesc {
-    Func(u32),
-    Table(u32),
-    Memory(u32),
-    Global(u32),
+    Func { func_idx: u32 },
+    Table { table_idx: u32 },
+    Memory { mem_idx: u32 },
+    Global { global_idx: u32 },
 }
 
 impl WasmEncode for ExportDesc {
     fn size(&self) -> usize {
         1 + match self {
-            ExportDesc::Func(x) => (*x as u32).size(),
-            ExportDesc::Table(x) => (*x as u32).size(),
-            ExportDesc::Memory(x) => (*x as u32).size(),
-            ExportDesc::Global(x) => (*x as u32).size(),
+            ExportDesc::Func { func_idx } => (*func_idx as u32).size(),
+            ExportDesc::Table { table_idx } => (*table_idx as u32).size(),
+            ExportDesc::Memory { mem_idx } => (*mem_idx as u32).size(),
+            ExportDesc::Global { global_idx } => (*global_idx as u32).size(),
         }
     }
 
     fn encode(&self, v: &mut Vec<u8>) {
         match self {
-            ExportDesc::Func(x) => {
+            ExportDesc::Func { func_idx } => {
                 v.push(0);
-                (*x as u32).encode(v);
+                (*func_idx as u32).encode(v);
             }
-            ExportDesc::Table(x) => {
+            ExportDesc::Table { table_idx } => {
                 v.push(1);
-                (*x as u32).encode(v);
+                (*table_idx as u32).encode(v);
             }
-            ExportDesc::Memory(x) => {
+            ExportDesc::Memory { mem_idx } => {
                 v.push(2);
-                (*x as u32).encode(v);
+                (*mem_idx as u32).encode(v);
             }
-            ExportDesc::Global(x) => {
+            ExportDesc::Global { global_idx } => {
                 v.push(3);
-                (*x as u32).encode(v);
+                (*global_idx as u32).encode(v);
             }
         }
     }
