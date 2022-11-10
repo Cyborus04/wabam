@@ -297,7 +297,7 @@ mod tests {
 
             exports: vec![Export {
                 name: "fac".into(),
-                desc: ExportDesc::Func(0),
+                desc: ExportDesc::Func { func_idx: 0 },
             }],
 
             ..Default::default()
