@@ -13,7 +13,7 @@ impl Function {
     pub(crate) fn size_func(these: &[Self]) -> usize {
         let size = these
             .iter()
-            .map(|func| (func.type_idx as u32).size())
+            .map(|func| func.type_idx.size())
             .sum::<usize>();
 
         size + (these.len() as u32).size()
@@ -23,7 +23,7 @@ impl Function {
         (these.len() as u32).encode(v);
 
         for func in these {
-            (func.type_idx as u32).encode(v);
+            func.type_idx.encode(v);
         }
     }
 

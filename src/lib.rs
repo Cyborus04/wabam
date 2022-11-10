@@ -69,7 +69,7 @@ impl WasmEncode for Module {
         let memory_size = 1 + self.memories.size();
         let global_size = 1 + self.globals.size();
         let export_size = 1 + self.exports.size();
-        let start_size = 1 + self.start.map(|x| (x as u32).size()).unwrap_or_default();
+        let start_size = 1 + self.start.map(|x| x.size()).unwrap_or_default();
         let element_size = 1 + self.elems.size();
         let code_size = 1 + Function::size_code(&self.functions);
         let data_size = 1 + self.datas.size();
@@ -217,7 +217,7 @@ impl WasmEncode for Data {
                 mem_index,
                 offset,
                 data,
-            } if *mem_index == 0 => (*mem_index as u32).size() + offset.size() + data.size(),
+            } if *mem_index == 0 => mem_index.size() + offset.size() + data.size(),
             Active {
                 mem_index: _,
                 offset,
@@ -236,7 +236,7 @@ impl WasmEncode for Data {
                 data,
             } if *mem_index == 0 => {
                 v.push(2);
-                (*mem_index as u32).encode(v);
+                mem_index.encode(v);
                 offset.encode(v);
                 data.encode(v);
             }
