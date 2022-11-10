@@ -1532,29 +1532,29 @@ impl WasmEncode for Instruction {
                 table_index.encode(v);
             },
             TableSize(table_index) => {
-                [0xFC, 12].encode(v);
+                [0xFCu8, 12].encode(v);
                 table_index.encode(v);
             },
             TableGrow(table_index) => {
-                [0xFC, 13].encode(v);
+                [0xFCu8, 13].encode(v);
                 table_index.encode(v);
             },
             TableFill(table_index) => {
-                [0xFC, 14].encode(v);
+                [0xFCu8, 14].encode(v);
                 table_index.encode(v);
             },
             TableCopy { dest_index, src_index } => {
-                [0xFC, 15].encode(v);
+                [0xFCu8, 15].encode(v);
                 dest_index.encode(v);
                 src_index.encode(v);
             },
             TableInit { table_index, elem_index } => {
-                [0xFC, 16].encode(v);
+                [0xFCu8, 16].encode(v);
                 table_index.encode(v);
                 elem_index.encode(v);
             },
             ElemDrop(elem_index) => {
-                [0xFC, 14].encode(v);
+                [0xFCu8, 14].encode(v);
                 elem_index.encode(v);
             },
             I32Load { align, offset } => {
@@ -1672,19 +1672,19 @@ impl WasmEncode for Instruction {
                 align.encode(v);
                 offset.encode(v);
             },
-            MemorySize => [0x3F, 0].encode(v),
-            MemoryGrow => [0x40, 0].encode(v),
+            MemorySize => [0x3Fu8, 0].encode(v),
+            MemoryGrow => [0x40u8, 0].encode(v),
             MemoryInit(data_idx) => {
-                [0xFC, 8].encode(v);
+                [0xFCu8, 8].encode(v);
                 data_idx.encode(v);
                 v.push(0);
             },
             DataDrop(data_idx) => {
-                [0x40, 9].encode(v);
+                [0x40u8, 9].encode(v);
                 data_idx.encode(v);
             },
-            MemoryCopy => [0xFC, 10, 0, 0].encode(v),
-            MemoryFill => [0xFC, 11, 0].encode(v),
+            MemoryCopy => [0xFCu8, 10, 0, 0].encode(v),
+            MemoryFill => [0xFCu8, 11, 0].encode(v),
             I32Const(x) => {
                 v.push(0x41);
                 x.encode(v);
@@ -1829,380 +1829,380 @@ impl WasmEncode for Instruction {
             S64Extend8 => v.push(0xC2),
             S64Extend16 => v.push(0xC3),
             S64Extend32 => v.push(0xC4),
-            S32SaturatingTruncateF32 => [0xFC, 0].encode(v),
-            U32SaturatingTruncateF32 => [0xFC, 1].encode(v),
-            S32SaturatingTruncateF64 => [0xFC, 2].encode(v),
-            U32SaturatingTruncateF64 => [0xFC, 3].encode(v),
-            S64SaturatingTruncateF32 => [0xFC, 4].encode(v),
-            U64SaturatingTruncateF32 => [0xFC, 5].encode(v),
-            S64SaturatingTruncateF64 => [0xFC, 6].encode(v),
-            U64SaturatingTruncateF64 => [0xFC, 7].encode(v),
+            S32SaturatingTruncateF32 => [0xFCu8, 0].encode(v),
+            U32SaturatingTruncateF32 => [0xFCu8, 1].encode(v),
+            S32SaturatingTruncateF64 => [0xFCu8, 2].encode(v),
+            U32SaturatingTruncateF64 => [0xFCu8, 3].encode(v),
+            S64SaturatingTruncateF32 => [0xFCu8, 4].encode(v),
+            U64SaturatingTruncateF32 => [0xFCu8, 5].encode(v),
+            S64SaturatingTruncateF64 => [0xFCu8, 6].encode(v),
+            U64SaturatingTruncateF64 => [0xFCu8, 7].encode(v),
             V128Load { align, offset } => {
-                [0xFD, 0].encode(v);
+                [0xFDu8, 0].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadS8x8 { align, offset } => {
-                [0xFD, 1].encode(v);
+                [0xFDu8, 1].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadU8x8 { align, offset } => {
-                [0xFD, 2].encode(v);
+                [0xFDu8, 2].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadS16x4 { align, offset } => {
-                [0xFD, 3].encode(v);
+                [0xFDu8, 3].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadU16x4 { align, offset } => {
-                [0xFD, 4].encode(v);
+                [0xFDu8, 4].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadS32x2 { align, offset } => {
-                [0xFD, 5].encode(v);
+                [0xFDu8, 5].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadU32x2 { align, offset } => {
-                [0xFD, 6].encode(v);
+                [0xFDu8, 6].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadSplatI8 { align, offset } => {
-                [0xFD, 7].encode(v);
+                [0xFDu8, 7].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadSplatI16 { align, offset } => {
-                [0xFD, 8].encode(v);
+                [0xFDu8, 8].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadSplatI32 { align, offset } => {
-                [0xFD, 9].encode(v);
+                [0xFDu8, 9].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadSplatI64 { align, offset } => {
-                [0xFD, 10].encode(v);
+                [0xFDu8, 10].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadZeroI32 { align, offset } => {
-                [0xFD, 92].encode(v);
+                [0xFDu8, 92].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128LoadZeroI64 { align, offset } => {
-                [0xFD, 93].encode(v);
+                [0xFDu8, 93].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128Store { align, offset } => {
-                [0xFD, 11].encode(v);
+                [0xFDu8, 11].encode(v);
                 align.encode(v);
                 offset.encode(v);
             },
             V128Load8Lane { align, offset, lane } => {
-                [0xFD, 84].encode(v);
+                [0xFDu8, 84].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Load16Lane { align, offset, lane } => {
-                [0xFD, 85].encode(v);
+                [0xFDu8, 85].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Load32Lane { align, offset, lane } => {
-                [0xFD, 86].encode(v);
+                [0xFDu8, 86].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Load64Lane { align, offset, lane } => {
-                [0xFD, 87].encode(v);
+                [0xFDu8, 87].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Store8Lane { align, offset, lane } => {
-                [0xFD, 88].encode(v);
+                [0xFDu8, 88].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Store16Lane { align, offset, lane } => {
-                [0xFD, 89].encode(v);
+                [0xFDu8, 89].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Store32Lane { align, offset, lane } => {
-                [0xFD, 90].encode(v);
+                [0xFDu8, 90].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Store64Lane { align, offset, lane } => {
-                [0xFD, 91].encode(v);
+                [0xFDu8, 91].encode(v);
                 align.encode(v);
                 offset.encode(v);
                 lane.encode(v);
             },
             V128Const(bytes) => {
-                [0xFD, 12].encode(v);
+                [0xFDu8, 12].encode(v);
                 bytes.encode(v);
             },
             I8x16Shuffle { lanes } => {
-                [0xFD, 13].encode(v);
+                [0xFDu8, 13].encode(v);
                 lanes.encode(v);
             },
             S8x16ExtractLane { lane } => {
-                [0xFD, 21, lane].encode(v);
+                [0xFDu8, 21, lane].encode(v);
             },
             U8x16ExtractLane { lane } => {
-                [0xFD, 22, lane].encode(v);
+                [0xFDu8, 22, lane].encode(v);
             },
             I8x16ReplaceLane { lane } => {
-                [0xFD, 23, lane].encode(v);
+                [0xFDu8, 23, lane].encode(v);
             },
             S16x8ExtractLane { lane } => {
-                [0xFD, 24, lane].encode(v);
+                [0xFDu8, 24, lane].encode(v);
             },
             U16x8ExtractLane { lane } => {
-                [0xFD, 25, lane].encode(v);
+                [0xFDu8, 25, lane].encode(v);
             },
             I16x8ReplaceLane { lane } => {
-                [0xFD, 26, lane].encode(v);
+                [0xFDu8, 26, lane].encode(v);
             },
             I32x4ExtractLane { lane } => {
-                [0xFD, 27, lane].encode(v);
+                [0xFDu8, 27, lane].encode(v);
             },
             I32x4ReplaceLane { lane } => {
-                [0xFD, 28, lane].encode(v);
+                [0xFDu8, 28, lane].encode(v);
             },
             I64x2ExtractLane { lane } => {
-                [0xFD, 29, lane].encode(v);
+                [0xFDu8, 29, lane].encode(v);
             },
             I64x2ReplaceLane { lane } => {
-                [0xFD, 30, lane].encode(v);
+                [0xFDu8, 30, lane].encode(v);
             },
             F32x4ExtractLane { lane } => {
-                [0xFD, 31, lane].encode(v);
+                [0xFDu8, 31, lane].encode(v);
             },
             F32x4ReplaceLane { lane } => {
-                [0xFD, 32, lane].encode(v);
+                [0xFDu8, 32, lane].encode(v);
             },
             F64x2ExtractLane { lane } => {
-                [0xFD, 33, lane].encode(v);
+                [0xFDu8, 33, lane].encode(v);
             },
             F64x2ReplaceLane { lane } => {
-                [0xFD, 34, lane].encode(v);
+                [0xFDu8, 34, lane].encode(v);
             },
-            I8x16Swizzle => [0xFD, 14].encode(v),
-            I8x16Splat => [0xFD, 15].encode(v),
-            I16x8Splat => [0xFD, 16].encode(v),
-            I32x4Splat => [0xFD, 17].encode(v),
-            I64x2Splat => [0xFD, 18].encode(v),
-            F32x4Splat => [0xFD, 19].encode(v),
-            F64x2Splat => [0xFD, 20].encode(v),
-            I8x16Eq => [0xFD, 35].encode(v),
-            I8x16Ne => [0xFD, 36].encode(v),
-            S8x16Lt => [0xFD, 37].encode(v),
-            U8x16Lt => [0xFD, 38].encode(v),
-            S8x16Gt => [0xFD, 39].encode(v),
-            U8x16Gt => [0xFD, 40].encode(v),
-            S8x16Le => [0xFD, 41].encode(v),
-            U8x16Le => [0xFD, 42].encode(v),
-            S8x16Ge => [0xFD, 43].encode(v),
-            U8x16Ge => [0xFD, 44].encode(v),
-            I16x8Eq => [0xFD, 45].encode(v),
-            I16x8Ne => [0xFD, 46].encode(v),
-            S16x8Lt => [0xFD, 47].encode(v),
-            U16x8Lt => [0xFD, 48].encode(v),
-            S16x8Gt => [0xFD, 49].encode(v),
-            U16x8Gt => [0xFD, 50].encode(v),
-            S16x8Le => [0xFD, 51].encode(v),
-            U16x8Le => [0xFD, 52].encode(v),
-            S16x8Ge => [0xFD, 53].encode(v),
-            U16x8Ge => [0xFD, 54].encode(v),
-            I32x4Eq => [0xFD, 55].encode(v),
-            I32x4Ne => [0xFD, 56].encode(v),
-            S32x4Lt => [0xFD, 57].encode(v),
-            U32x4Lt => [0xFD, 58].encode(v),
-            S32x4Gt => [0xFD, 59].encode(v),
-            U32x4Gt => [0xFD, 60].encode(v),
-            S32x4Le => [0xFD, 61].encode(v),
-            U32x4Le => [0xFD, 62].encode(v),
-            S32x4Ge => [0xFD, 63].encode(v),
-            U32x4Ge => [0xFD, 64].encode(v),
-            I64x2Eq => [0xFD, 214].encode(v),
-            I64x2Ne => [0xFD, 215].encode(v),
-            S64x2Lt => [0xFD, 216].encode(v),
-            S64x2Gt => [0xFD, 217].encode(v),
-            S64x2Le => [0xFD, 218].encode(v),
-            S64x2Ge => [0xFD, 219].encode(v),
-            F32x4Eq => [0xFD, 65].encode(v),
-            F32x4Ne => [0xFD, 66].encode(v),
-            F32x4Lt => [0xFD, 67].encode(v),
-            F32x4Gt => [0xFD, 68].encode(v),
-            F32x4Le => [0xFD, 69].encode(v),
-            F32x4Ge => [0xFD, 70].encode(v),
-            F64x2Eq => [0xFD, 71].encode(v),
-            F64x2Ne => [0xFD, 72].encode(v),
-            F64x2Lt => [0xFD, 73].encode(v),
-            F64x2Gt => [0xFD, 74].encode(v),
-            F64x2Le => [0xFD, 75].encode(v),
-            F64x2Ge => [0xFD, 76].encode(v),
-            V128Not => [0xFD, 77].encode(v),
-            V128And => [0xFD, 78].encode(v),
-            V128AndNot => [0xFD, 79].encode(v),
-            V128Or => [0xFD, 80].encode(v),
-            V128Xor => [0xFD, 81].encode(v),
-            V128BitSelect => [0xFD, 82].encode(v),
-            V128AnyTrue => [0xFD, 83].encode(v),
-            I8x16Abs => [0xFD, 96].encode(v),
-            I8x16Neg => [0xFD, 97].encode(v),
-            I8x16CountOnes => [0xFD, 98].encode(v),
-            I8x16AllTrue => [0xFD, 99].encode(v),
-            I8x16Bitmask => [0xFD, 100].encode(v),
-            S8x16NarrowI16x8 => [0xFD, 101].encode(v),
-            U8x16NarrowI16x8 => [0xFD, 102].encode(v),
-            I8x16Shl => [0xFD, 107].encode(v),
-            S8x16Shr => [0xFD, 108].encode(v),
-            U8x16Shr => [0xFD, 109].encode(v),
-            I8x16Add => [0xFD, 110].encode(v),
-            S8x16AddSaturate => [0xFD, 111].encode(v),
-            U8x16AddSaturate => [0xFD, 112].encode(v),
-            I8x16Sub => [0xFD, 113].encode(v),
-            S8x16SubSaturate => [0xFD, 114].encode(v),
-            U8x16SubSaturate => [0xFD, 115].encode(v),
-            S8x16Min => [0xFD, 118].encode(v),
-            U8x16Min => [0xFD, 119].encode(v),
-            S8x16Max => [0xFD, 120].encode(v),
-            U8x16Max => [0xFD, 121].encode(v),
-            U8x16Avgr => [0xFD, 123].encode(v),
-            I16x8ExtendAddPairwiseS8x16 => [0xFD, 124].encode(v),
-            I16x8ExtendAddPairwiseU8x16 => [0xFD, 125].encode(v),
-            I16x8Abs => [0xFD, 128].encode(v),
-            I16x8Neg => [0xFD, 129].encode(v),
-            S16x8Q15MulRSat => [0xFD, 130].encode(v),
-            I16x8AllTrue => [0xFD, 131].encode(v),
-            I16x8Bitmask => [0xFD, 132].encode(v),
-            S16x8NarrowI32x4 => [0xFD, 133].encode(v),
-            U16x8NarrowI32x4 => [0xFD, 134].encode(v),
-            I16x8ExtendLowS8x16 => [0xFD, 135].encode(v),
-            I16x8ExtendHighS8x16 => [0xFD, 136].encode(v),
-            I16x8ExtendLowU8x16 => [0xFD, 137].encode(v),
-            I16x8ExtendHighU8x16 => [0xFD, 138].encode(v),
-            I16x8Shl => [0xFD, 139].encode(v),
-            S16x8Shr => [0xFD, 140].encode(v),
-            U16x8Shr => [0xFD, 141].encode(v),
-            I16x8Add => [0xFD, 142].encode(v),
-            S16x8AddSaturate => [0xFD, 143].encode(v),
-            U16x8AddSaturate => [0xFD, 144].encode(v),
-            I16x8Sub => [0xFD, 145].encode(v),
-            S16x8SubSaturate => [0xFD, 146].encode(v),
-            U16x8SubSaturate => [0xFD, 147].encode(v),
-            I16x8Mul => [0xFD, 149].encode(v),
-            S16x8Min => [0xFD, 150].encode(v),
-            U16x8Min => [0xFD, 151].encode(v),
-            S16x8Max => [0xFD, 152].encode(v),
-            U16x8Max => [0xFD, 153].encode(v),
-            U16x8Avgr => [0xFD, 155].encode(v),
-            I16x8ExtMulLowS8x16 => [0xFD, 156].encode(v),
-            I16x8ExtMulHighS8x16 => [0xFD, 157].encode(v),
-            I16x8ExtMulLowU8x16 => [0xFD, 158].encode(v),
-            I16x8ExtMulHighU8x16 => [0xFD, 159].encode(v),
-            I32x4ExtendAddPairwiseS16x8 => [0xFD, 126].encode(v),
-            I32x4ExtendAddPairwiseU16x8 => [0xFD, 127].encode(v),
-            I32x4Abs => [0xFD, 160].encode(v),
-            I32x4Neg => [0xFD, 161].encode(v),
-            I32x4AllTrue => [0xFD, 163].encode(v),
-            I32x4Bitmask => [0xFD, 164].encode(v),
-            I32x4ExtendLowS16x8 => [0xFD, 167].encode(v),
-            I32x4ExtendHighS16x8 => [0xFD, 168].encode(v),
-            I32x4ExtendLowU16x8 => [0xFD, 169].encode(v),
-            I32x4ExtendHighU16x8 => [0xFD, 170].encode(v),
-            I32x4Shl => [0xFD, 171].encode(v),
-            S32x4Shr => [0xFD, 172].encode(v),
-            U32x4Shr => [0xFD, 173].encode(v),
-            I32x4Add => [0xFD, 174].encode(v),
-            I32x4Sub => [0xFD, 177].encode(v),
-            I32x4Mul => [0xFD, 181].encode(v),
-            S32x4Min => [0xFD, 182].encode(v),
-            U32x4Min => [0xFD, 183].encode(v),
-            S32x4Max => [0xFD, 184].encode(v),
-            U32x4Max => [0xFD, 185].encode(v),
-            I32x4DotProductS16x8 => [0xFD, 186].encode(v),
-            I32x4ExtMulLowS16x8 => [0xFD, 188].encode(v),
-            I32x4ExtMulHighS16x8 => [0xFD, 189].encode(v),
-            I32x4ExtMulLowU16x8 => [0xFD, 190].encode(v),
-            I32x4ExtMulHighU16x8 => [0xFD, 191].encode(v),
-            I64x2Abs => [0xFD, 192].encode(v),
-            I64x2Neg => [0xFD, 193].encode(v),
-            I64x2AllTrue => [0xFD, 195].encode(v),
-            I64x2Bitmask => [0xFD, 196].encode(v),
-            I64x2ExtendLowS32x4 => [0xFD, 199].encode(v),
-            I64x2ExtendHighS32x4 => [0xFD, 200].encode(v),
-            I64x2ExtendLowU32x4 => [0xFD, 201].encode(v),
-            I64x2ExtendHighU32x4 => [0xFD, 202].encode(v),
-            I64x2Shl => [0xFD, 203].encode(v),
-            S64x2Shr => [0xFD, 204].encode(v),
-            U64x2Shr => [0xFD, 205].encode(v),
-            I64x2Add => [0xFD, 206].encode(v),
-            I64x2Sub => [0xFD, 209].encode(v),
-            I64x2Mul => [0xFD, 213].encode(v),
-            I64x2ExtMulLowS32x4 => [0xFD, 220].encode(v),
-            I64x2ExtMulHighS32x4 => [0xFD, 221].encode(v),
-            I64x2ExtMulLowU32x4 => [0xFD, 223].encode(v),
-            I64x2ExtMulHighU32x4 => [0xFD, 224].encode(v),
-            F32x4Ceil => [0xFD, 103].encode(v),
-            F32x4Floor => [0xFD, 104].encode(v),
-            F32x4Trunc => [0xFD, 105].encode(v),
-            F32x4Nearest => [0xFD, 106].encode(v),
-            F32x4Abs => [0xFD, 224].encode(v),
-            F32x4Neg => [0xFD, 225].encode(v),
-            F32x4Sqrt => [0xFD, 227].encode(v),
-            F32x4Add => [0xFD, 228].encode(v),
-            F32x4Sub => [0xFD, 229].encode(v),
-            F32x4Mul => [0xFD, 230].encode(v),
-            F32x4Div => [0xFD, 231].encode(v),
-            F32x4Min => [0xFD, 232].encode(v),
-            F32x4Max => [0xFD, 233].encode(v),
-            F32x4PMin => [0xFD, 234].encode(v),
-            F32x4PMax => [0xFD, 235].encode(v),
-            F64x2Ceil => [0xFD, 116].encode(v),
-            F64x2Floor => [0xFD, 117].encode(v),
-            F64x2Trunc => [0xFD, 122].encode(v),
-            F64x2Nearest => [0xFD, 148].encode(v),
-            F64x2Abs => [0xFD, 236].encode(v),
-            F64x2Neg => [0xFD, 237].encode(v),
-            F64x2Sqrt => [0xFD, 239].encode(v),
-            F64x2Add => [0xFD, 240].encode(v),
-            F64x2Sub => [0xFD, 241].encode(v),
-            F64x2Mul => [0xFD, 242].encode(v),
-            F64x2Div => [0xFD, 243].encode(v),
-            F64x2Min => [0xFD, 244].encode(v),
-            F64x2Max => [0xFD, 245].encode(v),
-            F64x2PMin => [0xFD, 246].encode(v),
-            F64x2PMax => [0xFD, 247].encode(v),
-            S32x4TruncSatF32x4 => [0xFD, 248].encode(v),
-            U32x4TruncSatF32x4 => [0xFD, 249].encode(v),
-            F32x4ConvertS32x4 => [0xFD, 250].encode(v),
-            F32x4ConvertU32x4 => [0xFD, 251].encode(v),
-            S32x4TruncSatZeroF64x2 => [0xFD, 252].encode(v),
-            U32x4TruncSatZeroF64x2 => [0xFD, 253].encode(v),
-            F64x2ConvertLowS32x4 => [0xFD, 254].encode(v),
-            F64x2ConvertLowU32x4 => [0xFD, 255].encode(v),
-            F32x4DemoteF64x2Zero => [0xFD, 94].encode(v),
-            F64x2PromoteLowF32x4 => [0xFD, 95].encode(v),
+            I8x16Swizzle => [0xFDu8, 14].encode(v),
+            I8x16Splat => [0xFDu8, 15].encode(v),
+            I16x8Splat => [0xFDu8, 16].encode(v),
+            I32x4Splat => [0xFDu8, 17].encode(v),
+            I64x2Splat => [0xFDu8, 18].encode(v),
+            F32x4Splat => [0xFDu8, 19].encode(v),
+            F64x2Splat => [0xFDu8, 20].encode(v),
+            I8x16Eq => [0xFDu8, 35].encode(v),
+            I8x16Ne => [0xFDu8, 36].encode(v),
+            S8x16Lt => [0xFDu8, 37].encode(v),
+            U8x16Lt => [0xFDu8, 38].encode(v),
+            S8x16Gt => [0xFDu8, 39].encode(v),
+            U8x16Gt => [0xFDu8, 40].encode(v),
+            S8x16Le => [0xFDu8, 41].encode(v),
+            U8x16Le => [0xFDu8, 42].encode(v),
+            S8x16Ge => [0xFDu8, 43].encode(v),
+            U8x16Ge => [0xFDu8, 44].encode(v),
+            I16x8Eq => [0xFDu8, 45].encode(v),
+            I16x8Ne => [0xFDu8, 46].encode(v),
+            S16x8Lt => [0xFDu8, 47].encode(v),
+            U16x8Lt => [0xFDu8, 48].encode(v),
+            S16x8Gt => [0xFDu8, 49].encode(v),
+            U16x8Gt => [0xFDu8, 50].encode(v),
+            S16x8Le => [0xFDu8, 51].encode(v),
+            U16x8Le => [0xFDu8, 52].encode(v),
+            S16x8Ge => [0xFDu8, 53].encode(v),
+            U16x8Ge => [0xFDu8, 54].encode(v),
+            I32x4Eq => [0xFDu8, 55].encode(v),
+            I32x4Ne => [0xFDu8, 56].encode(v),
+            S32x4Lt => [0xFDu8, 57].encode(v),
+            U32x4Lt => [0xFDu8, 58].encode(v),
+            S32x4Gt => [0xFDu8, 59].encode(v),
+            U32x4Gt => [0xFDu8, 60].encode(v),
+            S32x4Le => [0xFDu8, 61].encode(v),
+            U32x4Le => [0xFDu8, 62].encode(v),
+            S32x4Ge => [0xFDu8, 63].encode(v),
+            U32x4Ge => [0xFDu8, 64].encode(v),
+            I64x2Eq => [0xFDu8, 214].encode(v),
+            I64x2Ne => [0xFDu8, 215].encode(v),
+            S64x2Lt => [0xFDu8, 216].encode(v),
+            S64x2Gt => [0xFDu8, 217].encode(v),
+            S64x2Le => [0xFDu8, 218].encode(v),
+            S64x2Ge => [0xFDu8, 219].encode(v),
+            F32x4Eq => [0xFDu8, 65].encode(v),
+            F32x4Ne => [0xFDu8, 66].encode(v),
+            F32x4Lt => [0xFDu8, 67].encode(v),
+            F32x4Gt => [0xFDu8, 68].encode(v),
+            F32x4Le => [0xFDu8, 69].encode(v),
+            F32x4Ge => [0xFDu8, 70].encode(v),
+            F64x2Eq => [0xFDu8, 71].encode(v),
+            F64x2Ne => [0xFDu8, 72].encode(v),
+            F64x2Lt => [0xFDu8, 73].encode(v),
+            F64x2Gt => [0xFDu8, 74].encode(v),
+            F64x2Le => [0xFDu8, 75].encode(v),
+            F64x2Ge => [0xFDu8, 76].encode(v),
+            V128Not => [0xFDu8, 77].encode(v),
+            V128And => [0xFDu8, 78].encode(v),
+            V128AndNot => [0xFDu8, 79].encode(v),
+            V128Or => [0xFDu8, 80].encode(v),
+            V128Xor => [0xFDu8, 81].encode(v),
+            V128BitSelect => [0xFDu8, 82].encode(v),
+            V128AnyTrue => [0xFDu8, 83].encode(v),
+            I8x16Abs => [0xFDu8, 96].encode(v),
+            I8x16Neg => [0xFDu8, 97].encode(v),
+            I8x16CountOnes => [0xFDu8, 98].encode(v),
+            I8x16AllTrue => [0xFDu8, 99].encode(v),
+            I8x16Bitmask => [0xFDu8, 100].encode(v),
+            S8x16NarrowI16x8 => [0xFDu8, 101].encode(v),
+            U8x16NarrowI16x8 => [0xFDu8, 102].encode(v),
+            I8x16Shl => [0xFDu8, 107].encode(v),
+            S8x16Shr => [0xFDu8, 108].encode(v),
+            U8x16Shr => [0xFDu8, 109].encode(v),
+            I8x16Add => [0xFDu8, 110].encode(v),
+            S8x16AddSaturate => [0xFDu8, 111].encode(v),
+            U8x16AddSaturate => [0xFDu8, 112].encode(v),
+            I8x16Sub => [0xFDu8, 113].encode(v),
+            S8x16SubSaturate => [0xFDu8, 114].encode(v),
+            U8x16SubSaturate => [0xFDu8, 115].encode(v),
+            S8x16Min => [0xFDu8, 118].encode(v),
+            U8x16Min => [0xFDu8, 119].encode(v),
+            S8x16Max => [0xFDu8, 120].encode(v),
+            U8x16Max => [0xFDu8, 121].encode(v),
+            U8x16Avgr => [0xFDu8, 123].encode(v),
+            I16x8ExtendAddPairwiseS8x16 => [0xFDu8, 124].encode(v),
+            I16x8ExtendAddPairwiseU8x16 => [0xFDu8, 125].encode(v),
+            I16x8Abs => [0xFDu8, 128].encode(v),
+            I16x8Neg => [0xFDu8, 129].encode(v),
+            S16x8Q15MulRSat => [0xFDu8, 130].encode(v),
+            I16x8AllTrue => [0xFDu8, 131].encode(v),
+            I16x8Bitmask => [0xFDu8, 132].encode(v),
+            S16x8NarrowI32x4 => [0xFDu8, 133].encode(v),
+            U16x8NarrowI32x4 => [0xFDu8, 134].encode(v),
+            I16x8ExtendLowS8x16 => [0xFDu8, 135].encode(v),
+            I16x8ExtendHighS8x16 => [0xFDu8, 136].encode(v),
+            I16x8ExtendLowU8x16 => [0xFDu8, 137].encode(v),
+            I16x8ExtendHighU8x16 => [0xFDu8, 138].encode(v),
+            I16x8Shl => [0xFDu8, 139].encode(v),
+            S16x8Shr => [0xFDu8, 140].encode(v),
+            U16x8Shr => [0xFDu8, 141].encode(v),
+            I16x8Add => [0xFDu8, 142].encode(v),
+            S16x8AddSaturate => [0xFDu8, 143].encode(v),
+            U16x8AddSaturate => [0xFDu8, 144].encode(v),
+            I16x8Sub => [0xFDu8, 145].encode(v),
+            S16x8SubSaturate => [0xFDu8, 146].encode(v),
+            U16x8SubSaturate => [0xFDu8, 147].encode(v),
+            I16x8Mul => [0xFDu8, 149].encode(v),
+            S16x8Min => [0xFDu8, 150].encode(v),
+            U16x8Min => [0xFDu8, 151].encode(v),
+            S16x8Max => [0xFDu8, 152].encode(v),
+            U16x8Max => [0xFDu8, 153].encode(v),
+            U16x8Avgr => [0xFDu8, 155].encode(v),
+            I16x8ExtMulLowS8x16 => [0xFDu8, 156].encode(v),
+            I16x8ExtMulHighS8x16 => [0xFDu8, 157].encode(v),
+            I16x8ExtMulLowU8x16 => [0xFDu8, 158].encode(v),
+            I16x8ExtMulHighU8x16 => [0xFDu8, 159].encode(v),
+            I32x4ExtendAddPairwiseS16x8 => [0xFDu8, 126].encode(v),
+            I32x4ExtendAddPairwiseU16x8 => [0xFDu8, 127].encode(v),
+            I32x4Abs => [0xFDu8, 160].encode(v),
+            I32x4Neg => [0xFDu8, 161].encode(v),
+            I32x4AllTrue => [0xFDu8, 163].encode(v),
+            I32x4Bitmask => [0xFDu8, 164].encode(v),
+            I32x4ExtendLowS16x8 => [0xFDu8, 167].encode(v),
+            I32x4ExtendHighS16x8 => [0xFDu8, 168].encode(v),
+            I32x4ExtendLowU16x8 => [0xFDu8, 169].encode(v),
+            I32x4ExtendHighU16x8 => [0xFDu8, 170].encode(v),
+            I32x4Shl => [0xFDu8, 171].encode(v),
+            S32x4Shr => [0xFDu8, 172].encode(v),
+            U32x4Shr => [0xFDu8, 173].encode(v),
+            I32x4Add => [0xFDu8, 174].encode(v),
+            I32x4Sub => [0xFDu8, 177].encode(v),
+            I32x4Mul => [0xFDu8, 181].encode(v),
+            S32x4Min => [0xFDu8, 182].encode(v),
+            U32x4Min => [0xFDu8, 183].encode(v),
+            S32x4Max => [0xFDu8, 184].encode(v),
+            U32x4Max => [0xFDu8, 185].encode(v),
+            I32x4DotProductS16x8 => [0xFDu8, 186].encode(v),
+            I32x4ExtMulLowS16x8 => [0xFDu8, 188].encode(v),
+            I32x4ExtMulHighS16x8 => [0xFDu8, 189].encode(v),
+            I32x4ExtMulLowU16x8 => [0xFDu8, 190].encode(v),
+            I32x4ExtMulHighU16x8 => [0xFDu8, 191].encode(v),
+            I64x2Abs => [0xFDu8, 192].encode(v),
+            I64x2Neg => [0xFDu8, 193].encode(v),
+            I64x2AllTrue => [0xFDu8, 195].encode(v),
+            I64x2Bitmask => [0xFDu8, 196].encode(v),
+            I64x2ExtendLowS32x4 => [0xFDu8, 199].encode(v),
+            I64x2ExtendHighS32x4 => [0xFDu8, 200].encode(v),
+            I64x2ExtendLowU32x4 => [0xFDu8, 201].encode(v),
+            I64x2ExtendHighU32x4 => [0xFDu8, 202].encode(v),
+            I64x2Shl => [0xFDu8, 203].encode(v),
+            S64x2Shr => [0xFDu8, 204].encode(v),
+            U64x2Shr => [0xFDu8, 205].encode(v),
+            I64x2Add => [0xFDu8, 206].encode(v),
+            I64x2Sub => [0xFDu8, 209].encode(v),
+            I64x2Mul => [0xFDu8, 213].encode(v),
+            I64x2ExtMulLowS32x4 => [0xFDu8, 220].encode(v),
+            I64x2ExtMulHighS32x4 => [0xFDu8, 221].encode(v),
+            I64x2ExtMulLowU32x4 => [0xFDu8, 223].encode(v),
+            I64x2ExtMulHighU32x4 => [0xFDu8, 224].encode(v),
+            F32x4Ceil => [0xFDu8, 103].encode(v),
+            F32x4Floor => [0xFDu8, 104].encode(v),
+            F32x4Trunc => [0xFDu8, 105].encode(v),
+            F32x4Nearest => [0xFDu8, 106].encode(v),
+            F32x4Abs => [0xFDu8, 224].encode(v),
+            F32x4Neg => [0xFDu8, 225].encode(v),
+            F32x4Sqrt => [0xFDu8, 227].encode(v),
+            F32x4Add => [0xFDu8, 228].encode(v),
+            F32x4Sub => [0xFDu8, 229].encode(v),
+            F32x4Mul => [0xFDu8, 230].encode(v),
+            F32x4Div => [0xFDu8, 231].encode(v),
+            F32x4Min => [0xFDu8, 232].encode(v),
+            F32x4Max => [0xFDu8, 233].encode(v),
+            F32x4PMin => [0xFDu8, 234].encode(v),
+            F32x4PMax => [0xFDu8, 235].encode(v),
+            F64x2Ceil => [0xFDu8, 116].encode(v),
+            F64x2Floor => [0xFDu8, 117].encode(v),
+            F64x2Trunc => [0xFDu8, 122].encode(v),
+            F64x2Nearest => [0xFDu8, 148].encode(v),
+            F64x2Abs => [0xFDu8, 236].encode(v),
+            F64x2Neg => [0xFDu8, 237].encode(v),
+            F64x2Sqrt => [0xFDu8, 239].encode(v),
+            F64x2Add => [0xFDu8, 240].encode(v),
+            F64x2Sub => [0xFDu8, 241].encode(v),
+            F64x2Mul => [0xFDu8, 242].encode(v),
+            F64x2Div => [0xFDu8, 243].encode(v),
+            F64x2Min => [0xFDu8, 244].encode(v),
+            F64x2Max => [0xFDu8, 245].encode(v),
+            F64x2PMin => [0xFDu8, 246].encode(v),
+            F64x2PMax => [0xFDu8, 247].encode(v),
+            S32x4TruncSatF32x4 => [0xFDu8, 248].encode(v),
+            U32x4TruncSatF32x4 => [0xFDu8, 249].encode(v),
+            F32x4ConvertS32x4 => [0xFDu8, 250].encode(v),
+            F32x4ConvertU32x4 => [0xFDu8, 251].encode(v),
+            S32x4TruncSatZeroF64x2 => [0xFDu8, 252].encode(v),
+            U32x4TruncSatZeroF64x2 => [0xFDu8, 253].encode(v),
+            F64x2ConvertLowS32x4 => [0xFDu8, 254].encode(v),
+            F64x2ConvertLowU32x4 => [0xFDu8, 255].encode(v),
+            F32x4DemoteF64x2Zero => [0xFDu8, 94].encode(v),
+            F64x2PromoteLowF32x4 => [0xFDu8, 95].encode(v),
         }
     }
 }
