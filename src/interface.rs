@@ -29,7 +29,7 @@ impl WasmEncode for ImportDesc {
     fn size(&self) -> usize {
         use ImportDesc::*;
         1 + match self {
-            Func { type_idx } => (*type_idx as u32).size(),
+            Func { type_idx } => type_idx.size(),
             Table { table_type } => table_type.size(),
             Memory { mem_type } => mem_type.size(),
             Global { global_type } => global_type.size(),
@@ -41,7 +41,7 @@ impl WasmEncode for ImportDesc {
         match self {
             Func { type_idx } => {
                 v.push(0);
-                (*type_idx as u32).encode(v);
+                type_idx.encode(v);
             }
             Table { table_type } => {
                 v.push(1);
@@ -86,10 +86,10 @@ pub enum ExportDesc {
 impl WasmEncode for ExportDesc {
     fn size(&self) -> usize {
         1 + match self {
-            ExportDesc::Func { func_idx } => (*func_idx as u32).size(),
-            ExportDesc::Table { table_idx } => (*table_idx as u32).size(),
-            ExportDesc::Memory { mem_idx } => (*mem_idx as u32).size(),
-            ExportDesc::Global { global_idx } => (*global_idx as u32).size(),
+            ExportDesc::Func { func_idx } => func_idx.size(),
+            ExportDesc::Table { table_idx } => table_idx.size(),
+            ExportDesc::Memory { mem_idx } => mem_idx.size(),
+            ExportDesc::Global { global_idx } => global_idx.size(),
         }
     }
 
@@ -97,19 +97,19 @@ impl WasmEncode for ExportDesc {
         match self {
             ExportDesc::Func { func_idx } => {
                 v.push(0);
-                (*func_idx as u32).encode(v);
+                func_idx.encode(v);
             }
             ExportDesc::Table { table_idx } => {
                 v.push(1);
-                (*table_idx as u32).encode(v);
+                table_idx.encode(v);
             }
             ExportDesc::Memory { mem_idx } => {
                 v.push(2);
-                (*mem_idx as u32).encode(v);
+                mem_idx.encode(v);
             }
             ExportDesc::Global { global_idx } => {
                 v.push(3);
-                (*global_idx as u32).encode(v);
+                global_idx.encode(v);
             }
         }
     }
