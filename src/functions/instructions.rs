@@ -129,6 +129,18 @@ impl WasmEncode for Expr {
     }
 }
 
+impl From<Vec<Instruction>> for Expr {
+    fn from(instructions: Vec<Instruction>) -> Self {
+        Self { instructions }
+    }
+}
+
+impl From<Instruction> for Expr {
+    fn from(instr: Instruction) -> Self {
+        Self { instructions: vec![instr] }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     // Control Instructions

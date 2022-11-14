@@ -276,23 +276,21 @@ mod tests {
             functions: vec![Function {
                 type_idx: 0,
                 locals: vec![],
-                body: Expr {
-                    instructions: vec![
-                        Instruction::LocalGet(0),
-                        Instruction::I64Const(1),
-                        Instruction::U64LessThan,
-                        Instruction::If(Some(ValType::F64)),
-                        Instruction::I64Const(1),
-                        Instruction::Else,
-                        Instruction::LocalGet(0),
-                        Instruction::LocalGet(0),
-                        Instruction::I64Const(1),
-                        Instruction::I64Sub,
-                        Instruction::Call(0),
-                        Instruction::F64Mul,
-                        Instruction::End,
-                    ],
-                },
+                body: vec![
+                    Instruction::LocalGet(0),
+                    Instruction::I64Const(1),
+                    Instruction::U64LessThan,
+                    Instruction::If(Some(ValType::F64)),
+                    Instruction::I64Const(1),
+                    Instruction::Else,
+                    Instruction::LocalGet(0),
+                    Instruction::LocalGet(0),
+                    Instruction::I64Const(1),
+                    Instruction::I64Sub,
+                    Instruction::Call(0),
+                    Instruction::F64Mul,
+                    Instruction::End,
+                ].into(),
             }],
 
             exports: vec![Export {
