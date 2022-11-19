@@ -57,25 +57,25 @@ macro_rules! ml {
 #[macro_export]
 macro_rules! mlto {
     (i32) => {
-        Some($crate::ValType::Num($crate::NumType::I32))
+        Some($crate::ValType::I32)
     };
     (i64) => {
-        Some($crate::ValType::Num($crate::NumType::I64))
+        Some($crate::ValType::I64)
     };
     (f32) => {
-        Some($crate::ValType::Num($crate::NumType::F32))
+        Some($crate::ValType::F32)
     };
     (f64) => {
-        Some($crate::ValType::Num($crate::NumType::F64))
+        Some($crate::ValType::F64)
     };
     (v128) => {
-        Some($crate::ValType::Vec($crate::Vectype::V128))
+        Some($crate::ValType::V128)
     };
     (funcref) => {
-        Some($crate::ValType::Ref($crate::RefType::FuncRef))
+        Some($crate::ValType::FuncRef)
     };
     (externref) => {
-        Some($crate::ValType::Ref($crate::RefType::ExternRef))
+        Some($crate::ValType::ExternRef)
     };
     ({$x:expr}) => {
         $x
@@ -87,25 +87,25 @@ macro_rules! mlto {
 #[macro_export]
 macro_rules! mlt {
     (i32) => {
-        $crate::ValType::Num($crate::NumType::I32)
+        $crate::ValType::I32
     };
     (i64) => {
-        $crate::ValType::Num($crate::NumType::I64)
+        $crate::ValType::I64
     };
     (f32) => {
-        $crate::ValType::Num($crate::NumType::F32)
+        $crate::ValType::F32
     };
     (f64) => {
-        $crate::ValType::Num($crate::NumType::F64)
+        $crate::ValType::F64
     };
     (v128) => {
-        $crate::ValType::Vec($crate::Vectype::V128)
+        $crate::ValType::V128
     };
     (funcref) => {
-        $crate::ValType::Ref($crate::RefType::FuncRef)
+        $crate::ValType::FuncRef
     };
     (externref) => {
-        $crate::ValType::Ref($crate::RefType::ExternRef)
+        $crate::ValType::ExternRef
     };
     ({$x:expr}) => {
         $x
