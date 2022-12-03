@@ -807,59 +807,59 @@ pub enum Instruction {
     F32x4Splat,
     F64x2Splat,
 
-    I8x16Eq,
-    I8x16Ne,
-    S8x16Lt,
-    U8x16Lt,
-    S8x16Gt,
-    U8x16Gt,
-    S8x16Le,
-    U8x16Le,
-    S8x16Ge,
-    U8x16Ge,
+    I8x16Equal,
+    I8x16NotEqual,
+    S8x16LessThan,
+    U8x16LessThan,
+    S8x16GreaterThan,
+    U8x16GreaterThan,
+    S8x16LessThanOrEqual,
+    U8x16LessThanOrEqual,
+    S8x16GreaterThanOrEqual,
+    U8x16GreaterThanOrEqual,
 
-    I16x8Eq,
-    I16x8Ne,
-    S16x8Lt,
-    U16x8Lt,
-    S16x8Gt,
-    U16x8Gt,
-    S16x8Le,
-    U16x8Le,
-    S16x8Ge,
-    U16x8Ge,
+    I16x8Equal,
+    I16x8NotEqual,
+    S16x8LessThan,
+    U16x8LessThan,
+    S16x8GreaterThan,
+    U16x8GreaterThan,
+    S16x8LessThanOrEqual,
+    U16x8LessThanOrEqual,
+    S16x8GreaterThanOrEqual,
+    U16x8GreaterThanOrEqual,
 
-    I32x4Eq,
-    I32x4Ne,
-    S32x4Lt,
-    U32x4Lt,
-    S32x4Gt,
-    U32x4Gt,
-    S32x4Le,
-    U32x4Le,
-    S32x4Ge,
-    U32x4Ge,
+    I32x4Equal,
+    I32x4NotEqual,
+    S32x4LessThan,
+    U32x4LessThan,
+    S32x4GreaterThan,
+    U32x4GreaterThan,
+    S32x4LessThanOrEqual,
+    U32x4LessThanOrEqual,
+    S32x4GreaterThanOrEqual,
+    U32x4GreaterThanOrEqual,
 
-    I64x2Eq,
-    I64x2Ne,
-    S64x2Lt,
-    S64x2Gt,
-    S64x2Le,
-    S64x2Ge,
+    I64x2Equal,
+    I64x2NotEqual,
+    S64x2LessThan,
+    S64x2GreaterThan,
+    S64x2LessThanOrEqual,
+    S64x2GreaterThanOrEqual,
 
-    F32x4Eq,
-    F32x4Ne,
-    F32x4Lt,
-    F32x4Gt,
-    F32x4Le,
-    F32x4Ge,
+    F32x4Equal,
+    F32x4NotEqual,
+    F32x4LessThan,
+    F32x4GreaterThan,
+    F32x4LessThanOrEqual,
+    F32x4GreaterThanOrEqual,
 
-    F64x2Eq,
-    F64x2Ne,
-    F64x2Lt,
-    F64x2Gt,
-    F64x2Le,
-    F64x2Ge,
+    F64x2Equal,
+    F64x2NotEqual,
+    F64x2LessThan,
+    F64x2GreaterThan,
+    F64x2LessThanOrEqual,
+    F64x2GreaterThanOrEqual,
 
     V128Not,
     V128And,
@@ -1264,54 +1264,54 @@ impl WasmEncode for Instruction {
             I64x2Splat |
             F32x4Splat |
             F64x2Splat |
-            I8x16Eq |
-            I8x16Ne |
-            S8x16Lt |
-            U8x16Lt |
-            S8x16Gt |
-            U8x16Gt |
-            S8x16Le |
-            U8x16Le |
-            S8x16Ge |
-            U8x16Ge |
-            I16x8Eq |
-            I16x8Ne |
-            S16x8Lt |
-            U16x8Lt |
-            S16x8Gt |
-            U16x8Gt |
-            S16x8Le |
-            U16x8Le |
-            S16x8Ge |
-            U16x8Ge |
-            I32x4Eq |
-            I32x4Ne |
-            S32x4Lt |
-            U32x4Lt |
-            S32x4Gt |
-            U32x4Gt |
-            S32x4Le |
-            U32x4Le |
-            S32x4Ge |
-            U32x4Ge |
-            I64x2Eq |
-            I64x2Ne |
-            S64x2Lt |
-            S64x2Gt |
-            S64x2Le |
-            S64x2Ge |
-            F32x4Eq |
-            F32x4Ne |
-            F32x4Lt |
-            F32x4Gt |
-            F32x4Le |
-            F32x4Ge |
-            F64x2Eq |
-            F64x2Ne |
-            F64x2Lt |
-            F64x2Gt |
-            F64x2Le |
-            F64x2Ge |
+            I8x16Equal |
+            I8x16NotEqual |
+            S8x16LessThan |
+            U8x16LessThan |
+            S8x16GreaterThan |
+            U8x16GreaterThan |
+            S8x16LessThanOrEqual |
+            U8x16LessThanOrEqual |
+            S8x16GreaterThanOrEqual |
+            U8x16GreaterThanOrEqual |
+            I16x8Equal |
+            I16x8NotEqual |
+            S16x8LessThan |
+            U16x8LessThan |
+            S16x8GreaterThan |
+            U16x8GreaterThan |
+            S16x8LessThanOrEqual |
+            U16x8LessThanOrEqual |
+            S16x8GreaterThanOrEqual |
+            U16x8GreaterThanOrEqual |
+            I32x4Equal |
+            I32x4NotEqual |
+            S32x4LessThan |
+            U32x4LessThan |
+            S32x4GreaterThan |
+            U32x4GreaterThan |
+            S32x4LessThanOrEqual |
+            U32x4LessThanOrEqual |
+            S32x4GreaterThanOrEqual |
+            U32x4GreaterThanOrEqual |
+            I64x2Equal |
+            I64x2NotEqual |
+            S64x2LessThan |
+            S64x2GreaterThan |
+            S64x2LessThanOrEqual |
+            S64x2GreaterThanOrEqual |
+            F32x4Equal |
+            F32x4NotEqual |
+            F32x4LessThan |
+            F32x4GreaterThan |
+            F32x4LessThanOrEqual |
+            F32x4GreaterThanOrEqual |
+            F64x2Equal |
+            F64x2NotEqual |
+            F64x2LessThan |
+            F64x2GreaterThan |
+            F64x2LessThanOrEqual |
+            F64x2GreaterThanOrEqual |
             V128Not |
             V128And |
             V128AndNot |
@@ -2024,54 +2024,54 @@ impl WasmEncode for Instruction {
             I64x2Splat => [0xFDu8, 18].encode(v),
             F32x4Splat => [0xFDu8, 19].encode(v),
             F64x2Splat => [0xFDu8, 20].encode(v),
-            I8x16Eq => [0xFDu8, 35].encode(v),
-            I8x16Ne => [0xFDu8, 36].encode(v),
-            S8x16Lt => [0xFDu8, 37].encode(v),
-            U8x16Lt => [0xFDu8, 38].encode(v),
-            S8x16Gt => [0xFDu8, 39].encode(v),
-            U8x16Gt => [0xFDu8, 40].encode(v),
-            S8x16Le => [0xFDu8, 41].encode(v),
-            U8x16Le => [0xFDu8, 42].encode(v),
-            S8x16Ge => [0xFDu8, 43].encode(v),
-            U8x16Ge => [0xFDu8, 44].encode(v),
-            I16x8Eq => [0xFDu8, 45].encode(v),
-            I16x8Ne => [0xFDu8, 46].encode(v),
-            S16x8Lt => [0xFDu8, 47].encode(v),
-            U16x8Lt => [0xFDu8, 48].encode(v),
-            S16x8Gt => [0xFDu8, 49].encode(v),
-            U16x8Gt => [0xFDu8, 50].encode(v),
-            S16x8Le => [0xFDu8, 51].encode(v),
-            U16x8Le => [0xFDu8, 52].encode(v),
-            S16x8Ge => [0xFDu8, 53].encode(v),
-            U16x8Ge => [0xFDu8, 54].encode(v),
-            I32x4Eq => [0xFDu8, 55].encode(v),
-            I32x4Ne => [0xFDu8, 56].encode(v),
-            S32x4Lt => [0xFDu8, 57].encode(v),
-            U32x4Lt => [0xFDu8, 58].encode(v),
-            S32x4Gt => [0xFDu8, 59].encode(v),
-            U32x4Gt => [0xFDu8, 60].encode(v),
-            S32x4Le => [0xFDu8, 61].encode(v),
-            U32x4Le => [0xFDu8, 62].encode(v),
-            S32x4Ge => [0xFDu8, 63].encode(v),
-            U32x4Ge => [0xFDu8, 64].encode(v),
-            I64x2Eq => [0xFDu8, 214].encode(v),
-            I64x2Ne => [0xFDu8, 215].encode(v),
-            S64x2Lt => [0xFDu8, 216].encode(v),
-            S64x2Gt => [0xFDu8, 217].encode(v),
-            S64x2Le => [0xFDu8, 218].encode(v),
-            S64x2Ge => [0xFDu8, 219].encode(v),
-            F32x4Eq => [0xFDu8, 65].encode(v),
-            F32x4Ne => [0xFDu8, 66].encode(v),
-            F32x4Lt => [0xFDu8, 67].encode(v),
-            F32x4Gt => [0xFDu8, 68].encode(v),
-            F32x4Le => [0xFDu8, 69].encode(v),
-            F32x4Ge => [0xFDu8, 70].encode(v),
-            F64x2Eq => [0xFDu8, 71].encode(v),
-            F64x2Ne => [0xFDu8, 72].encode(v),
-            F64x2Lt => [0xFDu8, 73].encode(v),
-            F64x2Gt => [0xFDu8, 74].encode(v),
-            F64x2Le => [0xFDu8, 75].encode(v),
-            F64x2Ge => [0xFDu8, 76].encode(v),
+            I8x16Equal => [0xFDu8, 35].encode(v),
+            I8x16NotEqual => [0xFDu8, 36].encode(v),
+            S8x16LessThan => [0xFDu8, 37].encode(v),
+            U8x16LessThan => [0xFDu8, 38].encode(v),
+            S8x16GreaterThan => [0xFDu8, 39].encode(v),
+            U8x16GreaterThan => [0xFDu8, 40].encode(v),
+            S8x16LessThanOrEqual => [0xFDu8, 41].encode(v),
+            U8x16LessThanOrEqual => [0xFDu8, 42].encode(v),
+            S8x16GreaterThanOrEqual => [0xFDu8, 43].encode(v),
+            U8x16GreaterThanOrEqual => [0xFDu8, 44].encode(v),
+            I16x8Equal => [0xFDu8, 45].encode(v),
+            I16x8NotEqual => [0xFDu8, 46].encode(v),
+            S16x8LessThan => [0xFDu8, 47].encode(v),
+            U16x8LessThan => [0xFDu8, 48].encode(v),
+            S16x8GreaterThan => [0xFDu8, 49].encode(v),
+            U16x8GreaterThan => [0xFDu8, 50].encode(v),
+            S16x8LessThanOrEqual => [0xFDu8, 51].encode(v),
+            U16x8LessThanOrEqual => [0xFDu8, 52].encode(v),
+            S16x8GreaterThanOrEqual => [0xFDu8, 53].encode(v),
+            U16x8GreaterThanOrEqual => [0xFDu8, 54].encode(v),
+            I32x4Equal => [0xFDu8, 55].encode(v),
+            I32x4NotEqual => [0xFDu8, 56].encode(v),
+            S32x4LessThan => [0xFDu8, 57].encode(v),
+            U32x4LessThan => [0xFDu8, 58].encode(v),
+            S32x4GreaterThan => [0xFDu8, 59].encode(v),
+            U32x4GreaterThan => [0xFDu8, 60].encode(v),
+            S32x4LessThanOrEqual => [0xFDu8, 61].encode(v),
+            U32x4LessThanOrEqual => [0xFDu8, 62].encode(v),
+            S32x4GreaterThanOrEqual => [0xFDu8, 63].encode(v),
+            U32x4GreaterThanOrEqual => [0xFDu8, 64].encode(v),
+            I64x2Equal => [0xFDu8, 214].encode(v),
+            I64x2NotEqual => [0xFDu8, 215].encode(v),
+            S64x2LessThan => [0xFDu8, 216].encode(v),
+            S64x2GreaterThan => [0xFDu8, 217].encode(v),
+            S64x2LessThanOrEqual => [0xFDu8, 218].encode(v),
+            S64x2GreaterThanOrEqual => [0xFDu8, 219].encode(v),
+            F32x4Equal => [0xFDu8, 65].encode(v),
+            F32x4NotEqual => [0xFDu8, 66].encode(v),
+            F32x4LessThan => [0xFDu8, 67].encode(v),
+            F32x4GreaterThan => [0xFDu8, 68].encode(v),
+            F32x4LessThanOrEqual => [0xFDu8, 69].encode(v),
+            F32x4GreaterThanOrEqual => [0xFDu8, 70].encode(v),
+            F64x2Equal => [0xFDu8, 71].encode(v),
+            F64x2NotEqual => [0xFDu8, 72].encode(v),
+            F64x2LessThan => [0xFDu8, 73].encode(v),
+            F64x2GreaterThan => [0xFDu8, 74].encode(v),
+            F64x2LessThanOrEqual => [0xFDu8, 75].encode(v),
+            F64x2GreaterThanOrEqual => [0xFDu8, 76].encode(v),
             V128Not => [0xFDu8, 77].encode(v),
             V128And => [0xFDu8, 78].encode(v),
             V128AndNot => [0xFDu8, 79].encode(v),
