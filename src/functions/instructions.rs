@@ -2,6 +2,7 @@ use crate::{RefType, ValType, WasmEncode};
 
 mod instr_macro;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
     pub instructions: Vec<Instruction>,
 }

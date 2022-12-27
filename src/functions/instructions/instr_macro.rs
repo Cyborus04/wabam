@@ -1,3 +1,14 @@
+/// A macro for creating [`Instruction`](crate::functions::Instruction)s with wat-like syntax
+/// 
+/// Values can be interpolated with `{ /* ... */ }` in place of an instruction's
+/// immediate or type
+/// 
+/// ```
+/// # use wabam::{functions::Instruction, instr};
+/// let x = 42;
+/// let c = instr!(i32.const { x });
+/// assert_eq!(c, Instruction::I32Const(42));
+/// ```
 #[macro_export]
 macro_rules! instr {
     (unreachable) => { $crate::I::Unreachable };
@@ -780,6 +791,31 @@ macro_rules! mlt {
     };
 }
 
+/// A macro for creating [`Expr`](crate::functions::Expr)s with wat-like syntax
+/// 
+/// Values can be interpolated with `{ /* ... */ }` in place of an instruction's
+/// immediate or type
+/// 
+/// ```
+/// # use wabam::{functions::{Expr, Instruction}, expr};
+/// let x = 42;
+/// let ex = expr!(
+///     (local.get 0)
+///     (i32.const { x })
+///     (i32.eq)
+/// );
+/// 
+/// assert_eq!(
+///     ex,
+///     Expr {
+///         instructions: vec![
+///             Instruction::LocalGet(0),
+///             Instruction::I32Const(42),
+///             Instruction::I32Equal,
+///         ],
+///     }
+/// );
+/// ```
 #[macro_export]
 macro_rules! expr {
     ($(($($t:tt)*))*) => {
