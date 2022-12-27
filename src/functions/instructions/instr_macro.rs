@@ -11,6 +11,16 @@
 /// ```
 #[macro_export]
 macro_rules! instr {
+    // Split the implementation from the usage, so the docs don't show every
+    // single instruction at once
+    ($($x:tt)*) => {
+        $crate::instr_impl!($($x)*)
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! instr_impl {
     (unreachable) => { $crate::I::Unreachable };
     (nop) => { $crate::I::NoOp };
 
