@@ -76,7 +76,7 @@ macro_rules! instr {
     (data.drop $x:tt) => {$crate::I::DataDrop($crate::ml!($x))};
     (memory.copy) => {$crate::I::MemoryCopy};
     (memory.fill) => {$crate::I::MemoryFill};
-    
+
     (i32.const $x:tt) => {$crate::I::I32Const($crate::ml!($x))};
     (i64.const $x:tt) => {$crate::I::I64Const($crate::ml!($x))};
     (f32.const $x:tt) => {$crate::I::F32Const($crate::ml!($x))};
@@ -157,7 +157,7 @@ macro_rules! instr {
     (i64.shr_u) => {$crate::I::U64ShiftRight};
     (i64.rotl) => {$crate::I::I64RotateLeft};
     (i64.rotr) => {$crate::I::I64RotateRight};
-    
+
     (f32.abs) => {$crate::I::F32AbsoluteValue};
     (f32.neg) => {$crate::I::F32Negate};
     (f32.ceil) => {$crate::I::F32Ceiling};
@@ -187,7 +187,7 @@ macro_rules! instr {
     (f64.min) => {$crate::I::F64Min};
     (f64.max) => {$crate::I::F64Max};
     (f64.copysign) => {$crate::I::F64CopySign};
-    
+
     (i32.wrap_i64) => {$crate::I::I32WrapI64};
     (i32.trunc_f32_s) => {$crate::I::S32TruncateF32};
     (i32.trunc_f32_u) => {$crate::I::U32TruncateF32};
@@ -248,59 +248,59 @@ macro_rules! instr {
     (v128.load64_zero $($memarg:tt)*) => {$crate::meminstr!(V128LoadZeroI64, 3, $($memarg)*)};
     (v128.store $($memarg:tt)*) => {$crate::meminstr!(V128Store, 4, $($memarg)*)};
     (v128.load8_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Load8Lane { 
-            align: $crate::memarg_align!(0, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Load8Lane {
+            align: $crate::memarg_align!(0, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.load16_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Load16Lane { 
-            align: $crate::memarg_align!(1, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Load16Lane {
+            align: $crate::memarg_align!(1, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.load32_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Load32Lane { 
-            align: $crate::memarg_align!(2, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Load32Lane {
+            align: $crate::memarg_align!(2, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.load64_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Load16Lane { 
-            align: $crate::memarg_align!(3, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Load16Lane {
+            align: $crate::memarg_align!(3, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.store8_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Store8Lane { 
-            align: $crate::memarg_align!(0, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Store8Lane {
+            align: $crate::memarg_align!(0, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.store16_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Store16Lane { 
-            align: $crate::memarg_align!(1, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Store16Lane {
+            align: $crate::memarg_align!(1, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.store32_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Store32Lane { 
-            align: $crate::memarg_align!(2, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Store32Lane {
+            align: $crate::memarg_align!(2, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.store64_lane $(align=$align:tt)? $(offset=$offset:tt)? $lane_idx:tt) => {
-        $crate::I::V128Store16Lane { 
-            align: $crate::memarg_align!(3, $(align=$align)?), 
-            offset: $crate::memarg_offset!($(offset=$offset)?), 
-            lane_idx: $crate::ml!($lane_idx) 
+        $crate::I::V128Store16Lane {
+            align: $crate::memarg_align!(3, $(align=$align)?),
+            offset: $crate::memarg_offset!($(offset=$offset)?),
+            lane_idx: $crate::ml!($lane_idx)
         }
     };
     (v128.const $_0:tt $_1:tt $_2:tt $_3:tt $_4:tt $_5:tt $_6:tt $_7:tt $_8:tt $_9:tt $a:tt $b:tt $c:tt $d:tt $e:tt $f:tt) => {
@@ -336,7 +336,7 @@ macro_rules! instr {
                 $crate::ml!($_4),
                 $crate::ml!($_5),
                 $crate::ml!($_6),
-                $crate::ml!($_7),    
+                $crate::ml!($_7),
             ];
             let bytes: [[u8; 2]; 8] = [
                 values[0].to_le_bytes(),
@@ -375,7 +375,7 @@ macro_rules! instr {
                 $crate::ml!($_0),
                 $crate::ml!($_1),
                 $crate::ml!($_2),
-                $crate::ml!($_3),    
+                $crate::ml!($_3),
             ];
             let bytes: [[u8; 4]; 4] = [
                 values[0].to_le_bytes(),
@@ -408,7 +408,7 @@ macro_rules! instr {
         {
             let values: [u64; 2] = [
                 $crate::ml!($_0),
-                $crate::ml!($_1),    
+                $crate::ml!($_1),
             ];
             let bytes: [[u8; 8]; 2] = [
                 values[0].to_le_bytes(),
@@ -548,7 +548,7 @@ macro_rules! instr {
     (i8x16.max_s) => {$crate::I::S8x16Max};
     (i8x16.max_u) => {$crate::I::U8x16Max};
     (i8x16.avgr_u) => {$crate::I::U8x16Avgr};
-    
+
     (i16x8.extadd_pairwise_i8x16_s) => {$crate::I::I16x8ExtendAddPairwiseS8x16};
     (i16x8.extadd_pairwise_i8x16_u) => {$crate::I::I16x8ExtendAddPairwiseU8x16};
     (i16x8.abs) => {$crate::I::I16x8Abs};
@@ -579,7 +579,7 @@ macro_rules! instr {
     (i16x8.extmul_high_i8x16_s) => {$crate::I::I16x8ExtMulHighS8x16};
     (i16x8.extmul_low_i8x16_u) => {$crate::I::I16x8ExtMulLowU8x16};
     (i16x8.extmul_high_i8x16_u) => {$crate::I::I16x8ExtMulHighU8x16};
-    
+
     (i32x4.extadd_pairwise_i8x16_s) => {$crate::I::I32x4ExtendAddPairwiseS16x8};
     (i32x4.extadd_pairwise_i8x16_u) => {$crate::I::I32x4ExtendAddPairwiseU16x8};
     (i32x4.abs) => {$crate::I::I32x4Abs};
@@ -605,7 +605,7 @@ macro_rules! instr {
     (i32x4.extmul_high_i8x16_s) => {$crate::I::I32x4ExtMulHighS16x8};
     (i32x4.extmul_low_i8x16_u) => {$crate::I::I32x4ExtMulLowU16x8};
     (i32x4.extmul_high_i8x16_u) => {$crate::I::I32x4ExtMulHighU16x8};
-    
+
     (i64x2.abs) => {$crate::I::I64x2Abs};
     (i64x2.neg) => {$crate::I::I64x2Neg};
     (i64x2.all_true) => {$crate::I::I64x2AllTrue};
@@ -667,7 +667,7 @@ macro_rules! instr {
     (f64x2.convert_i64x2_u) => {$crate::I::F64x2ConvertLowU32x4};
     (f32x4.demote_f64x2_zero) => {$crate::I::F32x4DemoteF64x2Zero};
     (f64x2.promote_low_f32x4) => {$crate::I::F64x2PromoteLowF32x4};
-} 
+}
 
 #[doc(hidden)]
 #[macro_export]
@@ -680,19 +680,35 @@ macro_rules! meminstr {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! memarg_align {
-    ($align_default:literal, ) => {$align_default};
-    ($align_default:literal, align=$align:tt) => {$crate::ml!($align)};
-    ($align_default:literal, offset=$offset:tt) => {$align_default};
-    ($align_default:literal, align=$align:tt offset=$offset:tt)  => {$crate::ml!($align)};
+    ($align_default:literal, ) => {
+        $align_default
+    };
+    ($align_default:literal, align=$align:tt) => {
+        $crate::ml!($align)
+    };
+    ($align_default:literal, offset=$offset:tt) => {
+        $align_default
+    };
+    ($align_default:literal, align=$align:tt offset=$offset:tt) => {
+        $crate::ml!($align)
+    };
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! memarg_offset {
-    () => {0};
-    (align=$align:tt) => {0};
-    (offset=$offset:tt) => {$crate::ml!($offset)};
-    (align=$align:tt offset=$offset:tt)  => {$crate::ml!($offset)};
+    () => {
+        0
+    };
+    (align=$align:tt) => {
+        0
+    };
+    (offset=$offset:tt) => {
+        $crate::ml!($offset)
+    };
+    (align=$align:tt offset=$offset:tt) => {
+        $crate::ml!($offset)
+    };
 }
 
 #[doc(hidden)]
