@@ -15,6 +15,9 @@ use interface::*;
 use encode::*;
 pub use val_types::*;
 
+#[doc(hidden)]
+pub use functions::Instruction as I;
+
 const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 
 pub struct Module {
