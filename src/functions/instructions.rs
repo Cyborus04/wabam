@@ -111,6 +111,7 @@ macro_rules! mlt {
     };
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
     pub instructions: Vec<Instruction>,
 }
