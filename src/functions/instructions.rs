@@ -28,7 +28,9 @@ impl From<Vec<Instruction>> for Expr {
 
 impl From<Instruction> for Expr {
     fn from(instr: Instruction) -> Self {
-        Self { instructions: vec![instr] }
+        Self {
+            instructions: vec![instr],
+        }
     }
 }
 
@@ -191,7 +193,7 @@ pub enum Instruction {
         align: u32,
         offset: u32,
     },
-    
+
     /// `i32.store`
     I32Store {
         align: u32,
@@ -213,7 +215,6 @@ pub enum Instruction {
         offset: u32,
     },
 
-    
     /// `i32.store8`
     I32StoreI8 {
         align: u32,
@@ -902,1210 +903,928 @@ pub enum Instruction {
     F64x2ConvertLowU32x4,
     F32x4DemoteF64x2Zero,
     F64x2PromoteLowF32x4,
-    
+}
+
+impl Instruction {
+    fn instr_id(&self) -> InstrId {
+        use InstrId::*;
+        use Instruction::*;
+        match self {
+            Unreachable => Single(0),
+            NoOp => Single(1),
+            Block(_) => Single(2),
+            Loop(_) => Single(3),
+            If(_) => Single(4),
+            Else => Single(5),
+            End => Single(0xB),
+            Branch(_) => Single(0xC),
+            BranchIf(_) => Single(0xD),
+            BranchTable {
+                depths: _,
+                failsafe: _,
+            } => Single(0xE),
+            Return => Single(0xF),
+            Call(_) => Single(0x10),
+            CallIndirect {
+                type_idx: _,
+                table_idx: _,
+            } => Single(0x11),
+            RefNull(_) => Single(0xD0),
+            RefIsNull => Single(0xD1),
+            RefFunc(_) => Single(0xD2),
+            Drop => Single(0x1A),
+            Select => Single(0x1B),
+            LocalGet(_) => Single(0x20),
+            LocalSet(_) => Single(0x21),
+            LocalTee(_) => Single(0x22),
+            GlobalGet(_) => Single(0x23),
+            GlobalSet(_) => Single(0x24),
+            TableGet(_) => Single(0x25),
+            TableSet(_) => Single(0x26),
+            TableSize(_) => Extended(0xFCu8, 12u32),
+            TableGrow(_) => Extended(0xFCu8, 13u32),
+            TableFill(_) => Extended(0xFCu8, 14u32),
+            TableCopy {
+                dest_index: _,
+                src_index: _,
+            } => Extended(0xFCu8, 15u32),
+            TableInit {
+                table_index: _,
+                elem_index: _,
+            } => Extended(0xFCu8, 16u32),
+            ElemDrop(_) => Extended(0xFCu8, 14u32),
+            I32Load {
+                align: _,
+                offset: _,
+            } => Single(0x28),
+            I64Load {
+                align: _,
+                offset: _,
+            } => Single(0x29),
+            F32Load {
+                align: _,
+                offset: _,
+            } => Single(0x2A),
+            F64Load {
+                align: _,
+                offset: _,
+            } => Single(0x2B),
+            I32LoadS8 {
+                align: _,
+                offset: _,
+            } => Single(0x2C),
+            I32LoadU8 {
+                align: _,
+                offset: _,
+            } => Single(0x2D),
+            I32LoadS16 {
+                align: _,
+                offset: _,
+            } => Single(0x2E),
+            I32LoadU16 {
+                align: _,
+                offset: _,
+            } => Single(0x2F),
+            I64LoadS8 {
+                align: _,
+                offset: _,
+            } => Single(0x30),
+            I64LoadU8 {
+                align: _,
+                offset: _,
+            } => Single(0x31),
+            I64LoadS16 {
+                align: _,
+                offset: _,
+            } => Single(0x32),
+            I64LoadU16 {
+                align: _,
+                offset: _,
+            } => Single(0x33),
+            I64LoadS32 {
+                align: _,
+                offset: _,
+            } => Single(0x34),
+            I64LoadU32 {
+                align: _,
+                offset: _,
+            } => Single(0x35),
+            I32Store {
+                align: _,
+                offset: _,
+            } => Single(0x36),
+            I64Store {
+                align: _,
+                offset: _,
+            } => Single(0x37),
+            F32Store {
+                align: _,
+                offset: _,
+            } => Single(0x38),
+            F64Store {
+                align: _,
+                offset: _,
+            } => Single(0x39),
+            I32StoreI8 {
+                align: _,
+                offset: _,
+            } => Single(0x3A),
+            I32StoreI16 {
+                align: _,
+                offset: _,
+            } => Single(0x3B),
+            I64StoreI8 {
+                align: _,
+                offset: _,
+            } => Single(0x3C),
+            I64StoreI16 {
+                align: _,
+                offset: _,
+            } => Single(0x3D),
+            I64StoreI32 {
+                align: _,
+                offset: _,
+            } => Single(0x3E),
+            MemorySize => Single(0x3F),
+            MemoryGrow => Single(0x40),
+            MemoryInit(_) => Extended(0xFC, 8),
+            DataDrop(_) => Extended(0x40, 9),
+            MemoryCopy => Extended(0xFC, 10),
+            MemoryFill => Extended(0xFC, 11),
+            I32Const(_) => Single(0x41),
+            I64Const(_) => Single(0x42),
+            F32Const(_) => Single(0x43),
+            F64Const(_) => Single(0x44),
+            I32EqualsZero => Single(0x45),
+            I32Equal => Single(0x46),
+            I32NotEqual => Single(0x47),
+            S32LessThan => Single(0x48),
+            U32LessThan => Single(0x49),
+            S32GreaterThan => Single(0x4A),
+            U32GreaterThan => Single(0x4B),
+            S32LessThanOrEqual => Single(0x4C),
+            U32LessThanOrEqual => Single(0x4D),
+            S32GreaterThanOrEqual => Single(0x4E),
+            U32GreaterThanOrEqual => Single(0x4F),
+            I64EqualsZero => Single(0x50),
+            I64Equal => Single(0x51),
+            I64NotEqual => Single(0x52),
+            S64LessThan => Single(0x53),
+            U64LessThan => Single(0x54),
+            S64GreaterThan => Single(0x55),
+            U64GreaterThan => Single(0x56),
+            S64LessThanOrEqual => Single(0x57),
+            U64LessThanOrEqual => Single(0x58),
+            S64GreaterThanOrEqual => Single(0x59),
+            U64GreaterThanOrEqual => Single(0x5A),
+            F32Equal => Single(0x5B),
+            F32NotEqual => Single(0x5C),
+            F32LessThan => Single(0x5D),
+            F32GreaterThan => Single(0x5E),
+            F32LessThanOrEqual => Single(0x5F),
+            F32GreaterThanOrEqual => Single(0x60),
+            F64Equal => Single(0x61),
+            F64NotEqual => Single(0x62),
+            F64LessThan => Single(0x63),
+            F64GreaterThan => Single(0x64),
+            F64LessThanOrEqual => Single(0x65),
+            F64GreaterThanOrEqual => Single(0x66),
+            I32CountLeadingZeroes => Single(0x67),
+            I32CountTrailingZeroes => Single(0x68),
+            I32CountOnes => Single(0x69),
+            I32Add => Single(0x6A),
+            I32Sub => Single(0x6B),
+            I32Mul => Single(0x6C),
+            S32Div => Single(0x6D),
+            U32Div => Single(0x6E),
+            S32Rem => Single(0x6F),
+            U32Rem => Single(0x70),
+            I32And => Single(0x71),
+            I32Or => Single(0x72),
+            I32Xor => Single(0x73),
+            I32ShiftLeft => Single(0x74),
+            S32ShiftRight => Single(0x75),
+            U32ShiftRight => Single(0x76),
+            I32RotateLeft => Single(0x77),
+            I32RotateRight => Single(0x78),
+            I64CountLeadingZeroes => Single(0x79),
+            I64CountTrailingZeroes => Single(0x7A),
+            I64CountOnes => Single(0x7B),
+            I64Add => Single(0x7C),
+            I64Sub => Single(0x7D),
+            I64Mul => Single(0x7E),
+            S64Div => Single(0x7F),
+            U64Div => Single(0x80),
+            S64Rem => Single(0x81),
+            U64Rem => Single(0x82),
+            I64And => Single(0x83),
+            I64Or => Single(0x84),
+            I64Xor => Single(0x85),
+            I64ShiftLeft => Single(0x86),
+            S64ShiftRight => Single(0x87),
+            U64ShiftRight => Single(0x88),
+            I64RotateLeft => Single(0x89),
+            I64RotateRight => Single(0x8A),
+            F32AbsoluteValue => Single(0x8B),
+            F32Negate => Single(0x8C),
+            F32Ceiling => Single(0x8D),
+            F32Floor => Single(0x8E),
+            F32Truncate => Single(0x8F),
+            F32Nearest => Single(0x90),
+            F32SquareRoot => Single(0x91),
+            F32Add => Single(0x92),
+            F32Sub => Single(0x93),
+            F32Mul => Single(0x94),
+            F32Div => Single(0x95),
+            F32Min => Single(0x96),
+            F32Max => Single(0x97),
+            F32CopySign => Single(0x98),
+            F64AbsoluteValue => Single(0x99),
+            F64Negate => Single(0x9A),
+            F64Ceiling => Single(0x9B),
+            F64Floor => Single(0x9C),
+            F64Truncate => Single(0x9D),
+            F64Nearest => Single(0x9E),
+            F64SquareRoot => Single(0x9F),
+            F64Add => Single(0xA0),
+            F64Sub => Single(0xA1),
+            F64Mul => Single(0xA2),
+            F64Div => Single(0xA3),
+            F64Min => Single(0xA4),
+            F64Max => Single(0xA5),
+            F64CopySign => Single(0xA6),
+            I32WrapI64 => Single(0xA7),
+            S32TruncateF32 => Single(0xA8),
+            U32TruncateF32 => Single(0xA9),
+            S32TruncateF64 => Single(0xAA),
+            U32TruncateF64 => Single(0xAB),
+            I64ExtendS32 => Single(0xAC),
+            I64ExtendU32 => Single(0xAD),
+            S64TruncateF32 => Single(0xAE),
+            U64TruncateF32 => Single(0xAF),
+            S64TruncateF64 => Single(0xB0),
+            U64TruncateF64 => Single(0xB1),
+            F32ConvertS32 => Single(0xB2),
+            F32ConvertU32 => Single(0xB3),
+            F32ConvertS64 => Single(0xB4),
+            F32ConvertU64 => Single(0xB5),
+            F32DemoteF64 => Single(0xB6),
+            F64ConvertS32 => Single(0xB7),
+            F64ConvertU32 => Single(0xB8),
+            F64ConvertS64 => Single(0xB9),
+            F64ConvertU64 => Single(0xBA),
+            F64PromoteF32 => Single(0xBB),
+            I32ReinterpretF32 => Single(0xBC),
+            I64ReinterpretF64 => Single(0xBD),
+            F32ReinterpretI32 => Single(0xBE),
+            F64ReinterpretI64 => Single(0xBF),
+            S32Extend8 => Single(0xC0),
+            S32Extend16 => Single(0xC1),
+            S64Extend8 => Single(0xC2),
+            S64Extend16 => Single(0xC3),
+            S64Extend32 => Single(0xC4),
+            S32SaturatingTruncateF32 => Extended(0xFC, 0),
+            U32SaturatingTruncateF32 => Extended(0xFC, 1),
+            S32SaturatingTruncateF64 => Extended(0xFC, 2),
+            U32SaturatingTruncateF64 => Extended(0xFC, 3),
+            S64SaturatingTruncateF32 => Extended(0xFC, 4),
+            U64SaturatingTruncateF32 => Extended(0xFC, 5),
+            S64SaturatingTruncateF64 => Extended(0xFC, 6),
+            U64SaturatingTruncateF64 => Extended(0xFC, 7),
+            V128Load {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 0),
+            V128LoadS8x8 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 1),
+            V128LoadU8x8 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 2),
+            V128LoadS16x4 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 3),
+            V128LoadU16x4 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 4),
+            V128LoadS32x2 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 5),
+            V128LoadU32x2 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 6),
+            V128LoadSplatI8 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 7),
+            V128LoadSplatI16 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 8),
+            V128LoadSplatI32 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 9),
+            V128LoadSplatI64 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 10),
+            V128LoadZeroI32 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 92),
+            V128LoadZeroI64 {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 93),
+            V128Store {
+                align: _,
+                offset: _,
+            } => Extended(0xFD, 11),
+            V128Load8Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 84),
+            V128Load16Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 85),
+            V128Load32Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 86),
+            V128Load64Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 87),
+            V128Store8Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 88),
+            V128Store16Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 89),
+            V128Store32Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 90),
+            V128Store64Lane {
+                align: _,
+                offset: _,
+                lane: _,
+            } => Extended(0xFD, 91),
+            V128Const(_) => Extended(0xFD, 12),
+            I8x16Shuffle { lanes: _ } => Extended(0xFD, 13),
+            S8x16ExtractLane { lane: _ } => Extended(0xFD, 21),
+            U8x16ExtractLane { lane: _ } => Extended(0xFD, 22),
+            I8x16ReplaceLane { lane: _ } => Extended(0xFD, 23),
+            S16x8ExtractLane { lane: _ } => Extended(0xFD, 24),
+            U16x8ExtractLane { lane: _ } => Extended(0xFD, 25),
+            I16x8ReplaceLane { lane: _ } => Extended(0xFD, 26),
+            I32x4ExtractLane { lane: _ } => Extended(0xFD, 27),
+            I32x4ReplaceLane { lane: _ } => Extended(0xFD, 28),
+            I64x2ExtractLane { lane: _ } => Extended(0xFD, 29),
+            I64x2ReplaceLane { lane: _ } => Extended(0xFD, 30),
+            F32x4ExtractLane { lane: _ } => Extended(0xFD, 31),
+            F32x4ReplaceLane { lane: _ } => Extended(0xFD, 32),
+            F64x2ExtractLane { lane: _ } => Extended(0xFD, 33),
+            F64x2ReplaceLane { lane: _ } => Extended(0xFD, 34),
+            I8x16Swizzle => Extended(0xFD, 14),
+            I8x16Splat => Extended(0xFD, 15),
+            I16x8Splat => Extended(0xFD, 16),
+            I32x4Splat => Extended(0xFD, 17),
+            I64x2Splat => Extended(0xFD, 18),
+            F32x4Splat => Extended(0xFD, 19),
+            F64x2Splat => Extended(0xFD, 20),
+            I8x16Equal => Extended(0xFD, 35),
+            I8x16NotEqual => Extended(0xFD, 36),
+            S8x16LessThan => Extended(0xFD, 37),
+            U8x16LessThan => Extended(0xFD, 38),
+            S8x16GreaterThan => Extended(0xFD, 39),
+            U8x16GreaterThan => Extended(0xFD, 40),
+            S8x16LessThanOrEqual => Extended(0xFD, 41),
+            U8x16LessThanOrEqual => Extended(0xFD, 42),
+            S8x16GreaterThanOrEqual => Extended(0xFD, 43),
+            U8x16GreaterThanOrEqual => Extended(0xFD, 44),
+            I16x8Equal => Extended(0xFD, 45),
+            I16x8NotEqual => Extended(0xFD, 46),
+            S16x8LessThan => Extended(0xFD, 47),
+            U16x8LessThan => Extended(0xFD, 48),
+            S16x8GreaterThan => Extended(0xFD, 49),
+            U16x8GreaterThan => Extended(0xFD, 50),
+            S16x8LessThanOrEqual => Extended(0xFD, 51),
+            U16x8LessThanOrEqual => Extended(0xFD, 52),
+            S16x8GreaterThanOrEqual => Extended(0xFD, 53),
+            U16x8GreaterThanOrEqual => Extended(0xFD, 54),
+            I32x4Equal => Extended(0xFD, 55),
+            I32x4NotEqual => Extended(0xFD, 56),
+            S32x4LessThan => Extended(0xFD, 57),
+            U32x4LessThan => Extended(0xFD, 58),
+            S32x4GreaterThan => Extended(0xFD, 59),
+            U32x4GreaterThan => Extended(0xFD, 60),
+            S32x4LessThanOrEqual => Extended(0xFD, 61),
+            U32x4LessThanOrEqual => Extended(0xFD, 62),
+            S32x4GreaterThanOrEqual => Extended(0xFD, 63),
+            U32x4GreaterThanOrEqual => Extended(0xFD, 64),
+            I64x2Equal => Extended(0xFD, 214),
+            I64x2NotEqual => Extended(0xFD, 215),
+            S64x2LessThan => Extended(0xFD, 216),
+            S64x2GreaterThan => Extended(0xFD, 217),
+            S64x2LessThanOrEqual => Extended(0xFD, 218),
+            S64x2GreaterThanOrEqual => Extended(0xFD, 219),
+            F32x4Equal => Extended(0xFD, 65),
+            F32x4NotEqual => Extended(0xFD, 66),
+            F32x4LessThan => Extended(0xFD, 67),
+            F32x4GreaterThan => Extended(0xFD, 68),
+            F32x4LessThanOrEqual => Extended(0xFD, 69),
+            F32x4GreaterThanOrEqual => Extended(0xFD, 70),
+            F64x2Equal => Extended(0xFD, 71),
+            F64x2NotEqual => Extended(0xFD, 72),
+            F64x2LessThan => Extended(0xFD, 73),
+            F64x2GreaterThan => Extended(0xFD, 74),
+            F64x2LessThanOrEqual => Extended(0xFD, 75),
+            F64x2GreaterThanOrEqual => Extended(0xFD, 76),
+            V128Not => Extended(0xFD, 77),
+            V128And => Extended(0xFD, 78),
+            V128AndNot => Extended(0xFD, 79),
+            V128Or => Extended(0xFD, 80),
+            V128Xor => Extended(0xFD, 81),
+            V128BitSelect => Extended(0xFD, 82),
+            V128AnyTrue => Extended(0xFD, 83),
+            I8x16Abs => Extended(0xFD, 96),
+            I8x16Neg => Extended(0xFD, 97),
+            I8x16CountOnes => Extended(0xFD, 98),
+            I8x16AllTrue => Extended(0xFD, 99),
+            I8x16Bitmask => Extended(0xFD, 100),
+            S8x16NarrowI16x8 => Extended(0xFD, 101),
+            U8x16NarrowI16x8 => Extended(0xFD, 102),
+            I8x16Shl => Extended(0xFD, 107),
+            S8x16Shr => Extended(0xFD, 108),
+            U8x16Shr => Extended(0xFD, 109),
+            I8x16Add => Extended(0xFD, 110),
+            S8x16AddSaturate => Extended(0xFD, 111),
+            U8x16AddSaturate => Extended(0xFD, 112),
+            I8x16Sub => Extended(0xFD, 113),
+            S8x16SubSaturate => Extended(0xFD, 114),
+            U8x16SubSaturate => Extended(0xFD, 115),
+            S8x16Min => Extended(0xFD, 118),
+            U8x16Min => Extended(0xFD, 119),
+            S8x16Max => Extended(0xFD, 120),
+            U8x16Max => Extended(0xFD, 121),
+            U8x16Avgr => Extended(0xFD, 123),
+            I16x8ExtendAddPairwiseS8x16 => Extended(0xFD, 124),
+            I16x8ExtendAddPairwiseU8x16 => Extended(0xFD, 125),
+            I16x8Abs => Extended(0xFD, 128),
+            I16x8Neg => Extended(0xFD, 129),
+            S16x8Q15MulRSat => Extended(0xFD, 130),
+            I16x8AllTrue => Extended(0xFD, 131),
+            I16x8Bitmask => Extended(0xFD, 132),
+            S16x8NarrowI32x4 => Extended(0xFD, 133),
+            U16x8NarrowI32x4 => Extended(0xFD, 134),
+            I16x8ExtendLowS8x16 => Extended(0xFD, 135),
+            I16x8ExtendHighS8x16 => Extended(0xFD, 136),
+            I16x8ExtendLowU8x16 => Extended(0xFD, 137),
+            I16x8ExtendHighU8x16 => Extended(0xFD, 138),
+            I16x8Shl => Extended(0xFD, 139),
+            S16x8Shr => Extended(0xFD, 140),
+            U16x8Shr => Extended(0xFD, 141),
+            I16x8Add => Extended(0xFD, 142),
+            S16x8AddSaturate => Extended(0xFD, 143),
+            U16x8AddSaturate => Extended(0xFD, 144),
+            I16x8Sub => Extended(0xFD, 145),
+            S16x8SubSaturate => Extended(0xFD, 146),
+            U16x8SubSaturate => Extended(0xFD, 147),
+            I16x8Mul => Extended(0xFD, 149),
+            S16x8Min => Extended(0xFD, 150),
+            U16x8Min => Extended(0xFD, 151),
+            S16x8Max => Extended(0xFD, 152),
+            U16x8Max => Extended(0xFD, 153),
+            U16x8Avgr => Extended(0xFD, 155),
+            I16x8ExtMulLowS8x16 => Extended(0xFD, 156),
+            I16x8ExtMulHighS8x16 => Extended(0xFD, 157),
+            I16x8ExtMulLowU8x16 => Extended(0xFD, 158),
+            I16x8ExtMulHighU8x16 => Extended(0xFD, 159),
+            I32x4ExtendAddPairwiseS16x8 => Extended(0xFD, 126),
+            I32x4ExtendAddPairwiseU16x8 => Extended(0xFD, 127),
+            I32x4Abs => Extended(0xFD, 160),
+            I32x4Neg => Extended(0xFD, 161),
+            I32x4AllTrue => Extended(0xFD, 163),
+            I32x4Bitmask => Extended(0xFD, 164),
+            I32x4ExtendLowS16x8 => Extended(0xFD, 167),
+            I32x4ExtendHighS16x8 => Extended(0xFD, 168),
+            I32x4ExtendLowU16x8 => Extended(0xFD, 169),
+            I32x4ExtendHighU16x8 => Extended(0xFD, 170),
+            I32x4Shl => Extended(0xFD, 171),
+            S32x4Shr => Extended(0xFD, 172),
+            U32x4Shr => Extended(0xFD, 173),
+            I32x4Add => Extended(0xFD, 174),
+            I32x4Sub => Extended(0xFD, 177),
+            I32x4Mul => Extended(0xFD, 181),
+            S32x4Min => Extended(0xFD, 182),
+            U32x4Min => Extended(0xFD, 183),
+            S32x4Max => Extended(0xFD, 184),
+            U32x4Max => Extended(0xFD, 185),
+            I32x4DotProductS16x8 => Extended(0xFD, 186),
+            I32x4ExtMulLowS16x8 => Extended(0xFD, 188),
+            I32x4ExtMulHighS16x8 => Extended(0xFD, 189),
+            I32x4ExtMulLowU16x8 => Extended(0xFD, 190),
+            I32x4ExtMulHighU16x8 => Extended(0xFD, 191),
+            I64x2Abs => Extended(0xFD, 192),
+            I64x2Neg => Extended(0xFD, 193),
+            I64x2AllTrue => Extended(0xFD, 195),
+            I64x2Bitmask => Extended(0xFD, 196),
+            I64x2ExtendLowS32x4 => Extended(0xFD, 199),
+            I64x2ExtendHighS32x4 => Extended(0xFD, 200),
+            I64x2ExtendLowU32x4 => Extended(0xFD, 201),
+            I64x2ExtendHighU32x4 => Extended(0xFD, 202),
+            I64x2Shl => Extended(0xFD, 203),
+            S64x2Shr => Extended(0xFD, 204),
+            U64x2Shr => Extended(0xFD, 205),
+            I64x2Add => Extended(0xFD, 206),
+            I64x2Sub => Extended(0xFD, 209),
+            I64x2Mul => Extended(0xFD, 213),
+            I64x2ExtMulLowS32x4 => Extended(0xFD, 220),
+            I64x2ExtMulHighS32x4 => Extended(0xFD, 221),
+            I64x2ExtMulLowU32x4 => Extended(0xFD, 223),
+            I64x2ExtMulHighU32x4 => Extended(0xFD, 224),
+            F32x4Ceil => Extended(0xFD, 103),
+            F32x4Floor => Extended(0xFD, 104),
+            F32x4Trunc => Extended(0xFD, 105),
+            F32x4Nearest => Extended(0xFD, 106),
+            F32x4Abs => Extended(0xFD, 224),
+            F32x4Neg => Extended(0xFD, 225),
+            F32x4Sqrt => Extended(0xFD, 227),
+            F32x4Add => Extended(0xFD, 228),
+            F32x4Sub => Extended(0xFD, 229),
+            F32x4Mul => Extended(0xFD, 230),
+            F32x4Div => Extended(0xFD, 231),
+            F32x4Min => Extended(0xFD, 232),
+            F32x4Max => Extended(0xFD, 233),
+            F32x4PMin => Extended(0xFD, 234),
+            F32x4PMax => Extended(0xFD, 235),
+            F64x2Ceil => Extended(0xFD, 116),
+            F64x2Floor => Extended(0xFD, 117),
+            F64x2Trunc => Extended(0xFD, 122),
+            F64x2Nearest => Extended(0xFD, 148),
+            F64x2Abs => Extended(0xFD, 236),
+            F64x2Neg => Extended(0xFD, 237),
+            F64x2Sqrt => Extended(0xFD, 239),
+            F64x2Add => Extended(0xFD, 240),
+            F64x2Sub => Extended(0xFD, 241),
+            F64x2Mul => Extended(0xFD, 242),
+            F64x2Div => Extended(0xFD, 243),
+            F64x2Min => Extended(0xFD, 244),
+            F64x2Max => Extended(0xFD, 245),
+            F64x2PMin => Extended(0xFD, 246),
+            F64x2PMax => Extended(0xFD, 247),
+            S32x4TruncSatF32x4 => Extended(0xFD, 248),
+            U32x4TruncSatF32x4 => Extended(0xFD, 249),
+            F32x4ConvertS32x4 => Extended(0xFD, 250),
+            F32x4ConvertU32x4 => Extended(0xFD, 251),
+            S32x4TruncSatZeroF64x2 => Extended(0xFD, 252),
+            U32x4TruncSatZeroF64x2 => Extended(0xFD, 253),
+            F64x2ConvertLowS32x4 => Extended(0xFD, 254),
+            F64x2ConvertLowU32x4 => Extended(0xFD, 255),
+            F32x4DemoteF64x2Zero => Extended(0xFD, 94),
+            F64x2PromoteLowF32x4 => Extended(0xFD, 95),
+        }
+    }
 }
 
 impl WasmEncode for Instruction {
     fn size(&self) -> usize {
         use Instruction::*;
-        match *self {
-            Unreachable => 1,
-            NoOp => 1,
-            Block(_) => 2,
-            Loop(_) => 2,
-            If(_) => 2,
-            Else => 1,
-            End => 1,
-            Branch(depth) => 1 + depth.size(),
-            BranchIf(depth) => 1 + depth.size(),
-            BranchTable { ref depths, failsafe } => 1 + depths.size() + failsafe.size(),
-            Return => 1,
-            Call(func_idx) => 1 + func_idx.size(),
-            CallIndirect { type_idx, table_idx } => 1 + type_idx.size() + table_idx.size(),
-            RefNull(ref_type) => 1 + ref_type.size(),
-            RefIsNull => 1,
-            RefFunc(func_idx) => 1 + func_idx.size(),
-            Drop => 1,
-            Select => 1, //fixme
-            LocalGet(local_index) |
-            LocalSet(local_index) |
-            LocalTee(local_index) => 1 + local_index.size(),
-            GlobalGet(global_index) |
-            GlobalSet(global_index) => 1 + global_index.size(),
-            TableGet(table_index) |
-            TableSet(table_index) => 1 + table_index.size(),
-            TableSize(table_index) |
-            TableGrow(table_index) |
-            TableFill(table_index) => 2 + table_index.size(),
-            TableCopy { dest_index, src_index } => 2 + dest_index.size() + src_index.size(),
-            TableInit { table_index, elem_index } => 2 + table_index.size() + elem_index.size(),
-            ElemDrop(elem_index) => 2 + elem_index.size(),
-            I32Load { align, offset } |
-            I64Load { align, offset } |
-            F32Load { align, offset } |
-            F64Load { align, offset } |
-            I32LoadS8 { align, offset } |
-            I32LoadU8 { align, offset } |
-            I32LoadS16 { align, offset } |
-            I32LoadU16 { align, offset } |
-            I64LoadS8 { align, offset } |
-            I64LoadU8 { align, offset } |
-            I64LoadS16 { align, offset } |
-            I64LoadU16 { align, offset } |
-            I64LoadS32 { align, offset } |
-            I64LoadU32 { align, offset } |
-            I32Store { align, offset } |
-            I64Store { align, offset } |
-            F32Store { align, offset } |
-            F64Store { align, offset } |
-            I32StoreI8 { align, offset } |
-            I32StoreI16 { align, offset } |
-            I64StoreI8 { align, offset } |
-            I64StoreI16 { align, offset } |
-            I64StoreI32 { align, offset } => 1 + align.size() + offset.size(),
-            MemorySize => 2,
-            MemoryGrow => 2,
-            MemoryInit(data_idx) => 3 + data_idx.size(),
-            DataDrop(data_idx) => 2 + data_idx.size(),
-            MemoryCopy => 4,
-            MemoryFill => 3,
-            I32Const(x) => 1 + x.size(),
-            I64Const(x) => 1 + x.size(),
-            F32Const(x) => 1 + x.size(),
-            F64Const(x) => 1 + x.size(),
-            I32EqualsZero |
-            I32Equal |
-            I32NotEqual |
-            S32LessThan |
-            U32LessThan |
-            S32GreaterThan |
-            U32GreaterThan |
-            S32LessThanOrEqual |
-            U32LessThanOrEqual |
-            S32GreaterThanOrEqual |
-            U32GreaterThanOrEqual |
-            I64EqualsZero |
-            I64Equal |
-            I64NotEqual |
-            S64LessThan |
-            U64LessThan |
-            S64GreaterThan |
-            U64GreaterThan |
-            S64LessThanOrEqual |
-            U64LessThanOrEqual |
-            S64GreaterThanOrEqual |
-            U64GreaterThanOrEqual |
-            F32Equal |
-            F32NotEqual |
-            F32LessThan |
-            F32GreaterThan |
-            F32LessThanOrEqual |
-            F32GreaterThanOrEqual |
-            F64Equal |
-            F64NotEqual |
-            F64LessThan |
-            F64GreaterThan |
-            F64LessThanOrEqual |
-            F64GreaterThanOrEqual |
-            I32CountLeadingZeroes |
-            I32CountTrailingZeroes |
-            I32CountOnes |
-            I32Add |
-            I32Sub |
-            I32Mul |
-            S32Div |
-            U32Div |
-            S32Rem |
-            U32Rem |
-            I32And |
-            I32Or |
-            I32Xor |
-            I32ShiftLeft |
-            S32ShiftRight |
-            U32ShiftRight |
-            I32RotateLeft |
-            I32RotateRight |
-            I64CountLeadingZeroes |
-            I64CountTrailingZeroes |
-            I64CountOnes |
-            I64Add |
-            I64Sub |
-            I64Mul |
-            S64Div |
-            U64Div |
-            S64Rem |
-            U64Rem |
-            I64And |
-            I64Or |
-            I64Xor |
-            I64ShiftLeft |
-            S64ShiftRight |
-            U64ShiftRight |
-            I64RotateLeft |
-            I64RotateRight |
-            F32AbsoluteValue |
-            F32Negate |
-            F32Ceiling |
-            F32Floor |
-            F32Truncate |
-            F32Nearest |
-            F32SquareRoot |
-            F32Add |
-            F32Sub |
-            F32Mul |
-            F32Div |
-            F32Min |
-            F32Max |
-            F32CopySign |
-            F64AbsoluteValue |
-            F64Negate |
-            F64Ceiling |
-            F64Floor |
-            F64Truncate |
-            F64Nearest |
-            F64SquareRoot |
-            F64Add |
-            F64Sub |
-            F64Mul |
-            F64Div |
-            F64Min |
-            F64Max |
-            F64CopySign |
-            I32WrapI64 |
-            S32TruncateF32 |
-            U32TruncateF32 |
-            S32TruncateF64 |
-            U32TruncateF64 |
-            I64ExtendS32 |
-            I64ExtendU32 |
-            S64TruncateF32 |
-            U64TruncateF32 |
-            S64TruncateF64 |
-            U64TruncateF64 |
-            F32ConvertS32 |
-            F32ConvertU32 |
-            F32ConvertS64 |
-            F32ConvertU64 |
-            F32DemoteF64 |
-            F64ConvertS32 |
-            F64ConvertU32 |
-            F64ConvertS64 |
-            F64ConvertU64 |
-            F64PromoteF32 |
-            I32ReinterpretF32 |
-            I64ReinterpretF64 |
-            F32ReinterpretI32 |
-            F64ReinterpretI64 |
-            S32Extend8 |
-            S32Extend16 |
-            S64Extend8 |
-            S64Extend16 |
-            S64Extend32 => 1,
-            S32SaturatingTruncateF32 |
-            U32SaturatingTruncateF32 |
-            S32SaturatingTruncateF64 |
-            U32SaturatingTruncateF64 |
-            S64SaturatingTruncateF32 |
-            U64SaturatingTruncateF32 |
-            S64SaturatingTruncateF64 |
-            U64SaturatingTruncateF64 => 2,
+        let immediate_size = match *self {
+            Block(_) => 1,
+            Loop(_) => 1,
+            If(_) => 1,
+            Branch(depth) => depth.size(),
+            BranchIf(depth) => depth.size(),
+            BranchTable {
+                ref depths,
+                failsafe,
+            } => depths.size() + failsafe.size(),
+            Call(func_idx) => func_idx.size(),
+            CallIndirect {
+                type_idx,
+                table_idx,
+            } => type_idx.size() + table_idx.size(),
+            RefNull(ref_type) => ref_type.size(),
+            RefFunc(func_idx) => func_idx.size(),
+            LocalGet(local_index) | LocalSet(local_index) | LocalTee(local_index) => {
+                local_index.size()
+            }
+            GlobalGet(global_index) | GlobalSet(global_index) => global_index.size(),
+            TableGet(table_index) | TableSet(table_index) => table_index.size(),
+            TableSize(table_index) | TableGrow(table_index) | TableFill(table_index) => {
+                table_index.size()
+            }
+            TableCopy {
+                dest_index,
+                src_index,
+            } => dest_index.size() + src_index.size(),
+            TableInit {
+                table_index,
+                elem_index,
+            } => table_index.size() + elem_index.size(),
+            ElemDrop(elem_index) => elem_index.size(),
+            I32Load { align, offset }
+            | I64Load { align, offset }
+            | F32Load { align, offset }
+            | F64Load { align, offset }
+            | I32LoadS8 { align, offset }
+            | I32LoadU8 { align, offset }
+            | I32LoadS16 { align, offset }
+            | I32LoadU16 { align, offset }
+            | I64LoadS8 { align, offset }
+            | I64LoadU8 { align, offset }
+            | I64LoadS16 { align, offset }
+            | I64LoadU16 { align, offset }
+            | I64LoadS32 { align, offset }
+            | I64LoadU32 { align, offset }
+            | I32Store { align, offset }
+            | I64Store { align, offset }
+            | F32Store { align, offset }
+            | F64Store { align, offset }
+            | I32StoreI8 { align, offset }
+            | I32StoreI16 { align, offset }
+            | I64StoreI8 { align, offset }
+            | I64StoreI16 { align, offset }
+            | I64StoreI32 { align, offset } => align.size() + offset.size(),
+            MemorySize => 1,
+            MemoryGrow => 1,
+            MemoryInit(data_idx) => data_idx.size(),
+            DataDrop(data_idx) => data_idx.size(),
+            MemoryCopy => 2,
+            MemoryFill => 1,
+            I32Const(x) => x.size(),
+            I64Const(x) => x.size(),
+            F32Const(x) => x.size(),
+            F64Const(x) => x.size(),
 
-            V128Load { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadS8x8 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadU8x8 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadS16x4 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadU16x4 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadS32x2 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadU32x2 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadSplatI8 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadSplatI16 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadSplatI32 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadSplatI64 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadZeroI32 { align, offset } => 2 + align.size() + offset.size(),
-            V128LoadZeroI64 { align, offset } => 2 + align.size() + offset.size(),
-            V128Store { align, offset } => 2 + align.size() + offset.size(),
-            V128Load8Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
-            V128Load16Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
-            V128Load32Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
-            V128Load64Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
-            V128Store8Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
-            V128Store16Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
-            V128Store32Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
-            V128Store64Lane { align, offset, lane: _ } => 3 + align.size() + offset.size(),
+            V128Load { align, offset }
+            | V128LoadS8x8 { align, offset }
+            | V128LoadU8x8 { align, offset }
+            | V128LoadS16x4 { align, offset }
+            | V128LoadU16x4 { align, offset }
+            | V128LoadS32x2 { align, offset }
+            | V128LoadU32x2 { align, offset }
+            | V128LoadSplatI8 { align, offset }
+            | V128LoadSplatI16 { align, offset }
+            | V128LoadSplatI32 { align, offset }
+            | V128LoadSplatI64 { align, offset }
+            | V128LoadZeroI32 { align, offset }
+            | V128LoadZeroI64 { align, offset }
+            | V128Store { align, offset } => align.size() + offset.size(),
+            V128Load8Lane {
+                align,
+                offset,
+                lane: _,
+            }
+            | V128Load16Lane {
+                align,
+                offset,
+                lane: _,
+            }
+            | V128Load32Lane {
+                align,
+                offset,
+                lane: _,
+            }
+            | V128Load64Lane {
+                align,
+                offset,
+                lane: _,
+            }
+            | V128Store8Lane {
+                align,
+                offset,
+                lane: _,
+            }
+            | V128Store16Lane {
+                align,
+                offset,
+                lane: _,
+            }
+            | V128Store32Lane {
+                align,
+                offset,
+                lane: _,
+            }
+            | V128Store64Lane {
+                align,
+                offset,
+                lane: _,
+            } => 1 + align.size() + offset.size(),
             V128Const(_) => 18,
             I8x16Shuffle { lanes: _ } => 18,
-            S8x16ExtractLane { lane: _ } |
-            U8x16ExtractLane { lane: _ } |
-            I8x16ReplaceLane { lane: _ } |
-            S16x8ExtractLane { lane: _ } |
-            U16x8ExtractLane { lane: _ } |
-            I16x8ReplaceLane { lane: _ } |
-            I32x4ExtractLane { lane: _ } |
-            I32x4ReplaceLane { lane: _ } |
-            I64x2ExtractLane { lane: _ } |
-            I64x2ReplaceLane { lane: _ } |
-            F32x4ExtractLane { lane: _ } |
-            F32x4ReplaceLane { lane: _ } |
-            F64x2ExtractLane { lane: _ } |
-            F64x2ReplaceLane { lane: _ } => 3,
-            I8x16Swizzle |
-            I8x16Splat |
-            I16x8Splat |
-            I32x4Splat |
-            I64x2Splat |
-            F32x4Splat |
-            F64x2Splat |
-            I8x16Equal |
-            I8x16NotEqual |
-            S8x16LessThan |
-            U8x16LessThan |
-            S8x16GreaterThan |
-            U8x16GreaterThan |
-            S8x16LessThanOrEqual |
-            U8x16LessThanOrEqual |
-            S8x16GreaterThanOrEqual |
-            U8x16GreaterThanOrEqual |
-            I16x8Equal |
-            I16x8NotEqual |
-            S16x8LessThan |
-            U16x8LessThan |
-            S16x8GreaterThan |
-            U16x8GreaterThan |
-            S16x8LessThanOrEqual |
-            U16x8LessThanOrEqual |
-            S16x8GreaterThanOrEqual |
-            U16x8GreaterThanOrEqual |
-            I32x4Equal |
-            I32x4NotEqual |
-            S32x4LessThan |
-            U32x4LessThan |
-            S32x4GreaterThan |
-            U32x4GreaterThan |
-            S32x4LessThanOrEqual |
-            U32x4LessThanOrEqual |
-            S32x4GreaterThanOrEqual |
-            U32x4GreaterThanOrEqual |
-            I64x2Equal |
-            I64x2NotEqual |
-            S64x2LessThan |
-            S64x2GreaterThan |
-            S64x2LessThanOrEqual |
-            S64x2GreaterThanOrEqual |
-            F32x4Equal |
-            F32x4NotEqual |
-            F32x4LessThan |
-            F32x4GreaterThan |
-            F32x4LessThanOrEqual |
-            F32x4GreaterThanOrEqual |
-            F64x2Equal |
-            F64x2NotEqual |
-            F64x2LessThan |
-            F64x2GreaterThan |
-            F64x2LessThanOrEqual |
-            F64x2GreaterThanOrEqual |
-            V128Not |
-            V128And |
-            V128AndNot |
-            V128Or |
-            V128Xor |
-            V128BitSelect |
-            V128AnyTrue |
-            I8x16Abs |
-            I8x16Neg |
-            I8x16CountOnes |
-            I8x16AllTrue |
-            I8x16Bitmask |
-            S8x16NarrowI16x8 |
-            U8x16NarrowI16x8 |
-            I8x16Shl |
-            S8x16Shr |
-            U8x16Shr |
-            I8x16Add |
-            S8x16AddSaturate |
-            U8x16AddSaturate |
-            I8x16Sub |
-            S8x16SubSaturate |
-            U8x16SubSaturate |
-            S8x16Min |
-            U8x16Min |
-            S8x16Max |
-            U8x16Max |
-            U8x16Avgr |
-            I16x8ExtendAddPairwiseS8x16 |
-            I16x8ExtendAddPairwiseU8x16 |
-            I16x8Abs |
-            I16x8Neg |
-            S16x8Q15MulRSat |
-            I16x8AllTrue |
-            I16x8Bitmask |
-            S16x8NarrowI32x4 |
-            U16x8NarrowI32x4 |
-            I16x8ExtendLowS8x16 |
-            I16x8ExtendHighS8x16 |
-            I16x8ExtendLowU8x16 |
-            I16x8ExtendHighU8x16 |
-            I16x8Shl |
-            S16x8Shr |
-            U16x8Shr |
-            I16x8Add |
-            S16x8AddSaturate |
-            U16x8AddSaturate |
-            I16x8Sub  |
-            S16x8SubSaturate  |
-            U16x8SubSaturate  |
-            I16x8Mul  |
-            S16x8Min  |
-            U16x8Min  |
-            S16x8Max  |
-            U16x8Max  |
-            U16x8Avgr  |
-            I16x8ExtMulLowS8x16  |
-            I16x8ExtMulHighS8x16  |
-            I16x8ExtMulLowU8x16  |
-            I16x8ExtMulHighU8x16  |
-            I32x4ExtendAddPairwiseS16x8  |
-            I32x4ExtendAddPairwiseU16x8  |
-            I32x4Abs  |
-            I32x4Neg  |
-            I32x4AllTrue  |
-            I32x4Bitmask  |
-            I32x4ExtendLowS16x8  |
-            I32x4ExtendHighS16x8  |
-            I32x4ExtendLowU16x8  |
-            I32x4ExtendHighU16x8  |
-            I32x4Shl  |
-            S32x4Shr  |
-            U32x4Shr  |
-            I32x4Add  |
-            I32x4Sub  |
-            I32x4Mul  |
-            S32x4Min  |
-            U32x4Min  |
-            S32x4Max  |
-            U32x4Max  |
-            I32x4DotProductS16x8  |
-            I32x4ExtMulLowS16x8  |
-            I32x4ExtMulHighS16x8  |
-            I32x4ExtMulLowU16x8  |
-            I32x4ExtMulHighU16x8  |
-            I64x2Abs  |
-            I64x2Neg  |
-            I64x2AllTrue  |
-            I64x2Bitmask  |
-            I64x2ExtendLowS32x4  |
-            I64x2ExtendHighS32x4  |
-            I64x2ExtendLowU32x4  |
-            I64x2ExtendHighU32x4  |
-            I64x2Shl  |
-            S64x2Shr  |
-            U64x2Shr  |
-            I64x2Add  |
-            I64x2Sub  |
-            I64x2Mul  |
-            I64x2ExtMulLowS32x4  |
-            I64x2ExtMulHighS32x4  |
-            I64x2ExtMulLowU32x4  |
-            I64x2ExtMulHighU32x4  |
-            F32x4Ceil  |
-            F32x4Floor  |
-            F32x4Trunc  |
-            F32x4Nearest  |
-            F32x4Abs  |
-            F32x4Neg  |
-            F32x4Sqrt  |
-            F32x4Add  |
-            F32x4Sub  |
-            F32x4Mul  |
-            F32x4Div  |
-            F32x4Min  |
-            F32x4Max |
-            F32x4PMin |
-            F32x4PMax |
-            F64x2Ceil |
-            F64x2Floor |
-            F64x2Trunc |
-            F64x2Nearest |
-            F64x2Abs |
-            F64x2Neg |
-            F64x2Sqrt |
-            F64x2Add |
-            F64x2Sub |
-            F64x2Mul |
-            F64x2Div |
-            F64x2Min |
-            F64x2Max |
-            F64x2PMin |
-            F64x2PMax |
-            S32x4TruncSatF32x4 |
-            U32x4TruncSatF32x4 |
-            F32x4ConvertS32x4 |
-            F32x4ConvertU32x4 |
-            S32x4TruncSatZeroF64x2 |
-            U32x4TruncSatZeroF64x2 |
-            F64x2ConvertLowS32x4 |
-            F64x2ConvertLowU32x4 |
-            F32x4DemoteF64x2Zero |
-            F64x2PromoteLowF32x4 => 2,
+            S8x16ExtractLane { lane: _ }
+            | U8x16ExtractLane { lane: _ }
+            | I8x16ReplaceLane { lane: _ }
+            | S16x8ExtractLane { lane: _ }
+            | U16x8ExtractLane { lane: _ }
+            | I16x8ReplaceLane { lane: _ }
+            | I32x4ExtractLane { lane: _ }
+            | I32x4ReplaceLane { lane: _ }
+            | I64x2ExtractLane { lane: _ }
+            | I64x2ReplaceLane { lane: _ }
+            | F32x4ExtractLane { lane: _ }
+            | F32x4ReplaceLane { lane: _ }
+            | F64x2ExtractLane { lane: _ }
+            | F64x2ReplaceLane { lane: _ } => 3,
 
-            
-        }
+            _ => 0,
+        };
+        self.instr_id().size() + immediate_size
     }
 
     fn encode(&self, v: &mut Vec<u8>) {
         use Instruction::*;
+        self.instr_id().encode(v);
         match *self {
-            Unreachable => v.push(0),
-            NoOp => v.push(1),
-            Block(kind) => {
-                v.push(2);
-                kind.encode(v);
-            },
-            Loop(kind) => {
-                v.push(3);
-                kind.encode(v);
-            },
-            If(kind) => {
-                v.push(4);
-                kind.encode(v);
-            },
-            Else => v.push(5),
-            End => v.push(0xB),
-            Branch(depth) => {
-                v.push(0xC);
-                depth.encode(v);
-            },
-            BranchIf(depth) => {
-                v.push(0xD);
-                depth.encode(v);
-            },
-            BranchTable { ref depths, failsafe } => {
-                v.push(0xE);
+            Block(kind) => kind.encode(v),
+            Loop(kind) => kind.encode(v),
+            If(kind) => kind.encode(v),
+            Branch(depth) => depth.encode(v),
+            BranchIf(depth) => depth.encode(v),
+            BranchTable {
+                ref depths,
+                failsafe,
+            } => {
                 for depth in depths {
                     depth.encode(v);
                 }
                 failsafe.encode(v);
-            },
-            Return => v.push(0xF),
+            }
             Call(func_idx) => {
-                v.push(0x10);
-                func_idx.encode(v);
-            },
-            CallIndirect { type_idx, table_idx } => {
-                v.push(0x11);
-                type_idx.encode(v);
-                table_idx.encode(v);
-            },
-            RefNull(ref_type) => {
-                v.push(0xD0);
-                ref_type.encode(v);
-            },
-            RefIsNull => v.push(0xD1),
-            RefFunc(func_index) => {
-                v.push(0xD2);
-                func_index.encode(v);
-            },
-            Drop => v.push(0x1A),
-            Select => v.push(0x1B),
-            LocalGet(local_index) => {
-                v.push(0x20);
-                local_index.encode(v);
-            },
-            LocalSet(local_index) => {
-                v.push(0x21);
-                local_index.encode(v);
-            },
-            LocalTee(local_index) => {
-                v.push(0x22);
-                local_index.encode(v);
-            },
-            GlobalGet(global_index) => {
-                v.push(0x23);
-                global_index.encode(v);
-            },
-            GlobalSet(global_index) => {
-                v.push(0x24);
-                global_index.encode(v);
-            },
-            TableGet(table_index) => {
-                v.push(0x25);
-                table_index.encode(v);
-            },
-            TableSet(table_index) => {
-                v.push(0x26);
-                table_index.encode(v);
-            },
-            TableSize(table_index) => {
-                [0xFCu8, 12].encode(v);
-                table_index.encode(v);
-            },
-            TableGrow(table_index) => {
-                [0xFCu8, 13].encode(v);
-                table_index.encode(v);
-            },
-            TableFill(table_index) => {
-                [0xFCu8, 14].encode(v);
-                table_index.encode(v);
-            },
-            TableCopy { dest_index, src_index } => {
-                [0xFCu8, 15].encode(v);
-                dest_index.encode(v);
-                src_index.encode(v);
-            },
-            TableInit { table_index, elem_index } => {
-                [0xFCu8, 16].encode(v);
-                table_index.encode(v);
-                elem_index.encode(v);
-            },
-            ElemDrop(elem_index) => {
-                [0xFCu8, 14].encode(v);
-                elem_index.encode(v);
-            },
-            I32Load { align, offset } => {
-                v.push(0x28);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64Load { align, offset } => {
-                v.push(0x29);
-                align.encode(v);
-                offset.encode(v);
-            },
-            F32Load { align, offset } => {
-                v.push(0x2A);
-                align.encode(v);
-                offset.encode(v);
-            },
-            F64Load { align, offset } => {
-                v.push(0x2B);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I32LoadS8 { align, offset } => {
-                v.push(0x2C);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I32LoadU8 { align, offset } => {
-                v.push(0x2D);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I32LoadS16 { align, offset } => {
-                v.push(0x2E);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I32LoadU16 { align, offset } => {
-                v.push(0x2F);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64LoadS8 { align, offset } => {
-                v.push(0x30);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64LoadU8 { align, offset } => {
-                v.push(0x31);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64LoadS16 { align, offset } => {
-                v.push(0x32);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64LoadU16 { align, offset } => {
-                v.push(0x33);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64LoadS32 { align, offset } => {
-                v.push(0x34);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64LoadU32 { align, offset } => {
-                v.push(0x35);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I32Store { align, offset } => {
-                v.push(0x36);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64Store { align, offset } => {
-                v.push(0x37);
-                align.encode(v);
-                offset.encode(v);
-            },
-            F32Store { align, offset } => {
-                v.push(0x38);
-                align.encode(v);
-                offset.encode(v);
-            },
-            F64Store { align, offset } => {
-                v.push(0x39);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I32StoreI8 { align, offset } => {
-                v.push(0x3A);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I32StoreI16 { align, offset } => {
-                v.push(0x3B);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64StoreI8 { align, offset } => {
-                v.push(0x3C);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64StoreI16 { align, offset } => {
-                v.push(0x3D);
-                align.encode(v);
-                offset.encode(v);
-            },
-            I64StoreI32 { align, offset } => {
-                v.push(0x3E);
-                align.encode(v);
-                offset.encode(v);
-            },
-            MemorySize => [0x3Fu8, 0].encode(v),
-            MemoryGrow => [0x40u8, 0].encode(v),
-            MemoryInit(data_idx) => {
-                [0xFCu8, 8].encode(v);
-                data_idx.encode(v);
-                v.push(0);
-            },
-            DataDrop(data_idx) => {
-                [0x40u8, 9].encode(v);
-                data_idx.encode(v);
-            },
-            MemoryCopy => [0xFCu8, 10, 0, 0].encode(v),
-            MemoryFill => [0xFCu8, 11, 0].encode(v),
-            I32Const(x) => {
-                v.push(0x41);
-                x.encode(v);
-            },
-            I64Const(x) => {
-                v.push(0x42);
-                x.encode(v);
-            },
-            F32Const(x) => {
-                v.push(0x43);
-                x.encode(v);
-            },
-            F64Const(x) => {
-                v.push(0x44);
-                x.encode(v);
-            },
-            I32EqualsZero => v.push(0x45),
-            I32Equal => v.push(0x46),
-            I32NotEqual => v.push(0x47),
-            S32LessThan => v.push(0x48),
-            U32LessThan => v.push(0x49),
-            S32GreaterThan => v.push(0x4A),
-            U32GreaterThan => v.push(0x4B),
-            S32LessThanOrEqual => v.push(0x4C),
-            U32LessThanOrEqual => v.push(0x4D),
-            S32GreaterThanOrEqual => v.push(0x4E),
-            U32GreaterThanOrEqual => v.push(0x4F),
-            I64EqualsZero => v.push(0x50),
-            I64Equal => v.push(0x51),
-            I64NotEqual => v.push(0x52),
-            S64LessThan => v.push(0x53),
-            U64LessThan => v.push(0x54),
-            S64GreaterThan => v.push(0x55),
-            U64GreaterThan => v.push(0x56),
-            S64LessThanOrEqual => v.push(0x57),
-            U64LessThanOrEqual => v.push(0x58),
-            S64GreaterThanOrEqual => v.push(0x59),
-            U64GreaterThanOrEqual => v.push(0x5A),
-            F32Equal => v.push(0x5B),
-            F32NotEqual => v.push(0x5C),
-            F32LessThan => v.push(0x5D),
-            F32GreaterThan => v.push(0x5E),
-            F32LessThanOrEqual => v.push(0x5F),
-            F32GreaterThanOrEqual => v.push(0x60),
-            F64Equal => v.push(0x61),
-            F64NotEqual => v.push(0x62),
-            F64LessThan => v.push(0x63),
-            F64GreaterThan => v.push(0x64),
-            F64LessThanOrEqual => v.push(0x65),
-            F64GreaterThanOrEqual => v.push(0x66),
-            I32CountLeadingZeroes => v.push(0x67),
-            I32CountTrailingZeroes => v.push(0x68),
-            I32CountOnes => v.push(0x69),
-            I32Add => v.push(0x6A),
-            I32Sub => v.push(0x6B),
-            I32Mul => v.push(0x6C),
-            S32Div => v.push(0x6D),
-            U32Div => v.push(0x6E),
-            S32Rem => v.push(0x6F),
-            U32Rem => v.push(0x70),
-            I32And => v.push(0x71),
-            I32Or => v.push(0x72),
-            I32Xor => v.push(0x73),
-            I32ShiftLeft => v.push(0x74),
-            S32ShiftRight => v.push(0x75),
-            U32ShiftRight => v.push(0x76),
-            I32RotateLeft => v.push(0x77),
-            I32RotateRight => v.push(0x78),
-            I64CountLeadingZeroes => v.push(0x79),
-            I64CountTrailingZeroes => v.push(0x7A),
-            I64CountOnes => v.push(0x7B),
-            I64Add => v.push(0x7C),
-            I64Sub => v.push(0x7D),
-            I64Mul => v.push(0x7E),
-            S64Div => v.push(0x7F),
-            U64Div => v.push(0x80),
-            S64Rem => v.push(0x81),
-            U64Rem => v.push(0x82),
-            I64And => v.push(0x83),
-            I64Or => v.push(0x84),
-            I64Xor => v.push(0x85),
-            I64ShiftLeft => v.push(0x86),
-            S64ShiftRight => v.push(0x87),
-            U64ShiftRight => v.push(0x88),
-            I64RotateLeft => v.push(0x89),
-            I64RotateRight => v.push(0x8A),
-            F32AbsoluteValue => v.push(0x8B),
-            F32Negate => v.push(0x8C),
-            F32Ceiling => v.push(0x8D),
-            F32Floor => v.push(0x8E),
-            F32Truncate => v.push(0x8F),
-            F32Nearest => v.push(0x90),
-            F32SquareRoot => v.push(0x91),
-            F32Add => v.push(0x92),
-            F32Sub => v.push(0x93),
-            F32Mul => v.push(0x94),
-            F32Div => v.push(0x95),
-            F32Min => v.push(0x96),
-            F32Max => v.push(0x97),
-            F32CopySign => v.push(0x98),
-            F64AbsoluteValue => v.push(0x99),
-            F64Negate => v.push(0x9A),
-            F64Ceiling => v.push(0x9B),
-            F64Floor => v.push(0x9C),
-            F64Truncate => v.push(0x9D),
-            F64Nearest => v.push(0x9E),
-            F64SquareRoot => v.push(0x9F),
-            F64Add => v.push(0xA0),
-            F64Sub => v.push(0xA1),
-            F64Mul => v.push(0xA2),
-            F64Div => v.push(0xA3),
-            F64Min => v.push(0xA4),
-            F64Max => v.push(0xA5),
-            F64CopySign => v.push(0xA6),
-            I32WrapI64 => v.push(0xA7),
-            S32TruncateF32 => v.push(0xA8),
-            U32TruncateF32 => v.push(0xA9),
-            S32TruncateF64 => v.push(0xAA),
-            U32TruncateF64 => v.push(0xAB),
-            I64ExtendS32 => v.push(0xAC),
-            I64ExtendU32 => v.push(0xAD),
-            S64TruncateF32 => v.push(0xAE),
-            U64TruncateF32 => v.push(0xAF),
-            S64TruncateF64 => v.push(0xB0),
-            U64TruncateF64 => v.push(0xB1),
-            F32ConvertS32 => v.push(0xB2),
-            F32ConvertU32 => v.push(0xB3),
-            F32ConvertS64 => v.push(0xB4),
-            F32ConvertU64 => v.push(0xB5),
-            F32DemoteF64 => v.push(0xB6),
-            F64ConvertS32 => v.push(0xB7),
-            F64ConvertU32 => v.push(0xB8),
-            F64ConvertS64 => v.push(0xB9),
-            F64ConvertU64 => v.push(0xBA),
-            F64PromoteF32 => v.push(0xBB),
-            I32ReinterpretF32 => v.push(0xBC),
-            I64ReinterpretF64 => v.push(0xBD),
-            F32ReinterpretI32 => v.push(0xBE),
-            F64ReinterpretI64 => v.push(0xBF),
-            S32Extend8 => v.push(0xC0),
-            S32Extend16 => v.push(0xC1),
-            S64Extend8 => v.push(0xC2),
-            S64Extend16 => v.push(0xC3),
-            S64Extend32 => v.push(0xC4),
-            S32SaturatingTruncateF32 => [0xFCu8, 0].encode(v),
-            U32SaturatingTruncateF32 => [0xFCu8, 1].encode(v),
-            S32SaturatingTruncateF64 => [0xFCu8, 2].encode(v),
-            U32SaturatingTruncateF64 => [0xFCu8, 3].encode(v),
-            S64SaturatingTruncateF32 => [0xFCu8, 4].encode(v),
-            U64SaturatingTruncateF32 => [0xFCu8, 5].encode(v),
-            S64SaturatingTruncateF64 => [0xFCu8, 6].encode(v),
-            U64SaturatingTruncateF64 => [0xFCu8, 7].encode(v),
-            V128Load { align, offset } => {
-                [0xFDu8, 0].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadS8x8 { align, offset } => {
-                [0xFDu8, 1].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadU8x8 { align, offset } => {
-                [0xFDu8, 2].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadS16x4 { align, offset } => {
-                [0xFDu8, 3].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadU16x4 { align, offset } => {
-                [0xFDu8, 4].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadS32x2 { align, offset } => {
-                [0xFDu8, 5].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadU32x2 { align, offset } => {
-                [0xFDu8, 6].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadSplatI8 { align, offset } => {
-                [0xFDu8, 7].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadSplatI16 { align, offset } => {
-                [0xFDu8, 8].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadSplatI32 { align, offset } => {
-                [0xFDu8, 9].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadSplatI64 { align, offset } => {
-                [0xFDu8, 10].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadZeroI32 { align, offset } => {
-                [0xFDu8, 92].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128LoadZeroI64 { align, offset } => {
-                [0xFDu8, 93].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128Store { align, offset } => {
-                [0xFDu8, 11].encode(v);
-                align.encode(v);
-                offset.encode(v);
-            },
-            V128Load8Lane { align, offset, lane } => {
-                [0xFDu8, 84].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Load16Lane { align, offset, lane } => {
-                [0xFDu8, 85].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Load32Lane { align, offset, lane } => {
-                [0xFDu8, 86].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Load64Lane { align, offset, lane } => {
-                [0xFDu8, 87].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Store8Lane { align, offset, lane } => {
-                [0xFDu8, 88].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Store16Lane { align, offset, lane } => {
-                [0xFDu8, 89].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Store32Lane { align, offset, lane } => {
-                [0xFDu8, 90].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Store64Lane { align, offset, lane } => {
-                [0xFDu8, 91].encode(v);
-                align.encode(v);
-                offset.encode(v);
-                lane.encode(v);
-            },
-            V128Const(bytes) => {
-                [0xFDu8, 12].encode(v);
-                bytes.encode(v);
-            },
-            I8x16Shuffle { lanes } => {
-                [0xFDu8, 13].encode(v);
-                lanes.encode(v);
-            },
-            S8x16ExtractLane { lane } => {
-                [0xFDu8, 21, lane].encode(v);
-            },
-            U8x16ExtractLane { lane } => {
-                [0xFDu8, 22, lane].encode(v);
-            },
-            I8x16ReplaceLane { lane } => {
-                [0xFDu8, 23, lane].encode(v);
-            },
-            S16x8ExtractLane { lane } => {
-                [0xFDu8, 24, lane].encode(v);
-            },
-            U16x8ExtractLane { lane } => {
-                [0xFDu8, 25, lane].encode(v);
-            },
-            I16x8ReplaceLane { lane } => {
-                [0xFDu8, 26, lane].encode(v);
-            },
-            I32x4ExtractLane { lane } => {
-                [0xFDu8, 27, lane].encode(v);
-            },
-            I32x4ReplaceLane { lane } => {
-                [0xFDu8, 28, lane].encode(v);
-            },
-            I64x2ExtractLane { lane } => {
-                [0xFDu8, 29, lane].encode(v);
-            },
-            I64x2ReplaceLane { lane } => {
-                [0xFDu8, 30, lane].encode(v);
-            },
-            F32x4ExtractLane { lane } => {
-                [0xFDu8, 31, lane].encode(v);
-            },
-            F32x4ReplaceLane { lane } => {
-                [0xFDu8, 32, lane].encode(v);
-            },
-            F64x2ExtractLane { lane } => {
-                [0xFDu8, 33, lane].encode(v);
-            },
-            F64x2ReplaceLane { lane } => {
-                [0xFDu8, 34, lane].encode(v);
-            },
-            I8x16Swizzle => [0xFDu8, 14].encode(v),
-            I8x16Splat => [0xFDu8, 15].encode(v),
-            I16x8Splat => [0xFDu8, 16].encode(v),
-            I32x4Splat => [0xFDu8, 17].encode(v),
-            I64x2Splat => [0xFDu8, 18].encode(v),
-            F32x4Splat => [0xFDu8, 19].encode(v),
-            F64x2Splat => [0xFDu8, 20].encode(v),
-            I8x16Equal => [0xFDu8, 35].encode(v),
-            I8x16NotEqual => [0xFDu8, 36].encode(v),
-            S8x16LessThan => [0xFDu8, 37].encode(v),
-            U8x16LessThan => [0xFDu8, 38].encode(v),
-            S8x16GreaterThan => [0xFDu8, 39].encode(v),
-            U8x16GreaterThan => [0xFDu8, 40].encode(v),
-            S8x16LessThanOrEqual => [0xFDu8, 41].encode(v),
-            U8x16LessThanOrEqual => [0xFDu8, 42].encode(v),
-            S8x16GreaterThanOrEqual => [0xFDu8, 43].encode(v),
-            U8x16GreaterThanOrEqual => [0xFDu8, 44].encode(v),
-            I16x8Equal => [0xFDu8, 45].encode(v),
-            I16x8NotEqual => [0xFDu8, 46].encode(v),
-            S16x8LessThan => [0xFDu8, 47].encode(v),
-            U16x8LessThan => [0xFDu8, 48].encode(v),
-            S16x8GreaterThan => [0xFDu8, 49].encode(v),
-            U16x8GreaterThan => [0xFDu8, 50].encode(v),
-            S16x8LessThanOrEqual => [0xFDu8, 51].encode(v),
-            U16x8LessThanOrEqual => [0xFDu8, 52].encode(v),
-            S16x8GreaterThanOrEqual => [0xFDu8, 53].encode(v),
-            U16x8GreaterThanOrEqual => [0xFDu8, 54].encode(v),
-            I32x4Equal => [0xFDu8, 55].encode(v),
-            I32x4NotEqual => [0xFDu8, 56].encode(v),
-            S32x4LessThan => [0xFDu8, 57].encode(v),
-            U32x4LessThan => [0xFDu8, 58].encode(v),
-            S32x4GreaterThan => [0xFDu8, 59].encode(v),
-            U32x4GreaterThan => [0xFDu8, 60].encode(v),
-            S32x4LessThanOrEqual => [0xFDu8, 61].encode(v),
-            U32x4LessThanOrEqual => [0xFDu8, 62].encode(v),
-            S32x4GreaterThanOrEqual => [0xFDu8, 63].encode(v),
-            U32x4GreaterThanOrEqual => [0xFDu8, 64].encode(v),
-            I64x2Equal => [0xFDu8, 214].encode(v),
-            I64x2NotEqual => [0xFDu8, 215].encode(v),
-            S64x2LessThan => [0xFDu8, 216].encode(v),
-            S64x2GreaterThan => [0xFDu8, 217].encode(v),
-            S64x2LessThanOrEqual => [0xFDu8, 218].encode(v),
-            S64x2GreaterThanOrEqual => [0xFDu8, 219].encode(v),
-            F32x4Equal => [0xFDu8, 65].encode(v),
-            F32x4NotEqual => [0xFDu8, 66].encode(v),
-            F32x4LessThan => [0xFDu8, 67].encode(v),
-            F32x4GreaterThan => [0xFDu8, 68].encode(v),
-            F32x4LessThanOrEqual => [0xFDu8, 69].encode(v),
-            F32x4GreaterThanOrEqual => [0xFDu8, 70].encode(v),
-            F64x2Equal => [0xFDu8, 71].encode(v),
-            F64x2NotEqual => [0xFDu8, 72].encode(v),
-            F64x2LessThan => [0xFDu8, 73].encode(v),
-            F64x2GreaterThan => [0xFDu8, 74].encode(v),
-            F64x2LessThanOrEqual => [0xFDu8, 75].encode(v),
-            F64x2GreaterThanOrEqual => [0xFDu8, 76].encode(v),
-            V128Not => [0xFDu8, 77].encode(v),
-            V128And => [0xFDu8, 78].encode(v),
-            V128AndNot => [0xFDu8, 79].encode(v),
-            V128Or => [0xFDu8, 80].encode(v),
-            V128Xor => [0xFDu8, 81].encode(v),
-            V128BitSelect => [0xFDu8, 82].encode(v),
-            V128AnyTrue => [0xFDu8, 83].encode(v),
-            I8x16Abs => [0xFDu8, 96].encode(v),
-            I8x16Neg => [0xFDu8, 97].encode(v),
-            I8x16CountOnes => [0xFDu8, 98].encode(v),
-            I8x16AllTrue => [0xFDu8, 99].encode(v),
-            I8x16Bitmask => [0xFDu8, 100].encode(v),
-            S8x16NarrowI16x8 => [0xFDu8, 101].encode(v),
-            U8x16NarrowI16x8 => [0xFDu8, 102].encode(v),
-            I8x16Shl => [0xFDu8, 107].encode(v),
-            S8x16Shr => [0xFDu8, 108].encode(v),
-            U8x16Shr => [0xFDu8, 109].encode(v),
-            I8x16Add => [0xFDu8, 110].encode(v),
-            S8x16AddSaturate => [0xFDu8, 111].encode(v),
-            U8x16AddSaturate => [0xFDu8, 112].encode(v),
-            I8x16Sub => [0xFDu8, 113].encode(v),
-            S8x16SubSaturate => [0xFDu8, 114].encode(v),
-            U8x16SubSaturate => [0xFDu8, 115].encode(v),
-            S8x16Min => [0xFDu8, 118].encode(v),
-            U8x16Min => [0xFDu8, 119].encode(v),
-            S8x16Max => [0xFDu8, 120].encode(v),
-            U8x16Max => [0xFDu8, 121].encode(v),
-            U8x16Avgr => [0xFDu8, 123].encode(v),
-            I16x8ExtendAddPairwiseS8x16 => [0xFDu8, 124].encode(v),
-            I16x8ExtendAddPairwiseU8x16 => [0xFDu8, 125].encode(v),
-            I16x8Abs => [0xFDu8, 128].encode(v),
-            I16x8Neg => [0xFDu8, 129].encode(v),
-            S16x8Q15MulRSat => [0xFDu8, 130].encode(v),
-            I16x8AllTrue => [0xFDu8, 131].encode(v),
-            I16x8Bitmask => [0xFDu8, 132].encode(v),
-            S16x8NarrowI32x4 => [0xFDu8, 133].encode(v),
-            U16x8NarrowI32x4 => [0xFDu8, 134].encode(v),
-            I16x8ExtendLowS8x16 => [0xFDu8, 135].encode(v),
-            I16x8ExtendHighS8x16 => [0xFDu8, 136].encode(v),
-            I16x8ExtendLowU8x16 => [0xFDu8, 137].encode(v),
-            I16x8ExtendHighU8x16 => [0xFDu8, 138].encode(v),
-            I16x8Shl => [0xFDu8, 139].encode(v),
-            S16x8Shr => [0xFDu8, 140].encode(v),
-            U16x8Shr => [0xFDu8, 141].encode(v),
-            I16x8Add => [0xFDu8, 142].encode(v),
-            S16x8AddSaturate => [0xFDu8, 143].encode(v),
-            U16x8AddSaturate => [0xFDu8, 144].encode(v),
-            I16x8Sub => [0xFDu8, 145].encode(v),
-            S16x8SubSaturate => [0xFDu8, 146].encode(v),
-            U16x8SubSaturate => [0xFDu8, 147].encode(v),
-            I16x8Mul => [0xFDu8, 149].encode(v),
-            S16x8Min => [0xFDu8, 150].encode(v),
-            U16x8Min => [0xFDu8, 151].encode(v),
-            S16x8Max => [0xFDu8, 152].encode(v),
-            U16x8Max => [0xFDu8, 153].encode(v),
-            U16x8Avgr => [0xFDu8, 155].encode(v),
-            I16x8ExtMulLowS8x16 => [0xFDu8, 156].encode(v),
-            I16x8ExtMulHighS8x16 => [0xFDu8, 157].encode(v),
-            I16x8ExtMulLowU8x16 => [0xFDu8, 158].encode(v),
-            I16x8ExtMulHighU8x16 => [0xFDu8, 159].encode(v),
-            I32x4ExtendAddPairwiseS16x8 => [0xFDu8, 126].encode(v),
-            I32x4ExtendAddPairwiseU16x8 => [0xFDu8, 127].encode(v),
-            I32x4Abs => [0xFDu8, 160].encode(v),
-            I32x4Neg => [0xFDu8, 161].encode(v),
-            I32x4AllTrue => [0xFDu8, 163].encode(v),
-            I32x4Bitmask => [0xFDu8, 164].encode(v),
-            I32x4ExtendLowS16x8 => [0xFDu8, 167].encode(v),
-            I32x4ExtendHighS16x8 => [0xFDu8, 168].encode(v),
-            I32x4ExtendLowU16x8 => [0xFDu8, 169].encode(v),
-            I32x4ExtendHighU16x8 => [0xFDu8, 170].encode(v),
-            I32x4Shl => [0xFDu8, 171].encode(v),
-            S32x4Shr => [0xFDu8, 172].encode(v),
-            U32x4Shr => [0xFDu8, 173].encode(v),
-            I32x4Add => [0xFDu8, 174].encode(v),
-            I32x4Sub => [0xFDu8, 177].encode(v),
-            I32x4Mul => [0xFDu8, 181].encode(v),
-            S32x4Min => [0xFDu8, 182].encode(v),
-            U32x4Min => [0xFDu8, 183].encode(v),
-            S32x4Max => [0xFDu8, 184].encode(v),
-            U32x4Max => [0xFDu8, 185].encode(v),
-            I32x4DotProductS16x8 => [0xFDu8, 186].encode(v),
-            I32x4ExtMulLowS16x8 => [0xFDu8, 188].encode(v),
-            I32x4ExtMulHighS16x8 => [0xFDu8, 189].encode(v),
-            I32x4ExtMulLowU16x8 => [0xFDu8, 190].encode(v),
-            I32x4ExtMulHighU16x8 => [0xFDu8, 191].encode(v),
-            I64x2Abs => [0xFDu8, 192].encode(v),
-            I64x2Neg => [0xFDu8, 193].encode(v),
-            I64x2AllTrue => [0xFDu8, 195].encode(v),
-            I64x2Bitmask => [0xFDu8, 196].encode(v),
-            I64x2ExtendLowS32x4 => [0xFDu8, 199].encode(v),
-            I64x2ExtendHighS32x4 => [0xFDu8, 200].encode(v),
-            I64x2ExtendLowU32x4 => [0xFDu8, 201].encode(v),
-            I64x2ExtendHighU32x4 => [0xFDu8, 202].encode(v),
-            I64x2Shl => [0xFDu8, 203].encode(v),
-            S64x2Shr => [0xFDu8, 204].encode(v),
-            U64x2Shr => [0xFDu8, 205].encode(v),
-            I64x2Add => [0xFDu8, 206].encode(v),
-            I64x2Sub => [0xFDu8, 209].encode(v),
-            I64x2Mul => [0xFDu8, 213].encode(v),
-            I64x2ExtMulLowS32x4 => [0xFDu8, 220].encode(v),
-            I64x2ExtMulHighS32x4 => [0xFDu8, 221].encode(v),
-            I64x2ExtMulLowU32x4 => [0xFDu8, 223].encode(v),
-            I64x2ExtMulHighU32x4 => [0xFDu8, 224].encode(v),
-            F32x4Ceil => [0xFDu8, 103].encode(v),
-            F32x4Floor => [0xFDu8, 104].encode(v),
-            F32x4Trunc => [0xFDu8, 105].encode(v),
-            F32x4Nearest => [0xFDu8, 106].encode(v),
-            F32x4Abs => [0xFDu8, 224].encode(v),
-            F32x4Neg => [0xFDu8, 225].encode(v),
-            F32x4Sqrt => [0xFDu8, 227].encode(v),
-            F32x4Add => [0xFDu8, 228].encode(v),
-            F32x4Sub => [0xFDu8, 229].encode(v),
-            F32x4Mul => [0xFDu8, 230].encode(v),
-            F32x4Div => [0xFDu8, 231].encode(v),
-            F32x4Min => [0xFDu8, 232].encode(v),
-            F32x4Max => [0xFDu8, 233].encode(v),
-            F32x4PMin => [0xFDu8, 234].encode(v),
-            F32x4PMax => [0xFDu8, 235].encode(v),
-            F64x2Ceil => [0xFDu8, 116].encode(v),
-            F64x2Floor => [0xFDu8, 117].encode(v),
-            F64x2Trunc => [0xFDu8, 122].encode(v),
-            F64x2Nearest => [0xFDu8, 148].encode(v),
-            F64x2Abs => [0xFDu8, 236].encode(v),
-            F64x2Neg => [0xFDu8, 237].encode(v),
-            F64x2Sqrt => [0xFDu8, 239].encode(v),
-            F64x2Add => [0xFDu8, 240].encode(v),
-            F64x2Sub => [0xFDu8, 241].encode(v),
-            F64x2Mul => [0xFDu8, 242].encode(v),
-            F64x2Div => [0xFDu8, 243].encode(v),
-            F64x2Min => [0xFDu8, 244].encode(v),
-            F64x2Max => [0xFDu8, 245].encode(v),
-            F64x2PMin => [0xFDu8, 246].encode(v),
-            F64x2PMax => [0xFDu8, 247].encode(v),
-            S32x4TruncSatF32x4 => [0xFDu8, 248].encode(v),
-            U32x4TruncSatF32x4 => [0xFDu8, 249].encode(v),
-            F32x4ConvertS32x4 => [0xFDu8, 250].encode(v),
-            F32x4ConvertU32x4 => [0xFDu8, 251].encode(v),
-            S32x4TruncSatZeroF64x2 => [0xFDu8, 252].encode(v),
-            U32x4TruncSatZeroF64x2 => [0xFDu8, 253].encode(v),
-            F64x2ConvertLowS32x4 => [0xFDu8, 254].encode(v),
-            F64x2ConvertLowU32x4 => [0xFDu8, 255].encode(v),
-            F32x4DemoteF64x2Zero => [0xFDu8, 94].encode(v),
-            F64x2PromoteLowF32x4 => [0xFDu8, 95].encode(v),
+                (func_idx).encode(v);
+            }
+            CallIndirect {
+                type_idx,
+                table_idx,
+            } => (type_idx, table_idx).encode(v),
+            RefNull(ref_type) => ref_type.encode(v),
+            RefFunc(func_index) => func_index.encode(v),
+            LocalGet(local_index) => local_index.encode(v),
+            LocalSet(local_index) => local_index.encode(v),
+            LocalTee(local_index) => local_index.encode(v),
+            GlobalGet(global_index) => global_index.encode(v),
+            GlobalSet(global_index) => global_index.encode(v),
+            TableGet(table_index) => table_index.encode(v),
+            TableSet(table_index) => table_index.encode(v),
+            TableSize(table_index) => table_index.encode(v),
+            TableGrow(table_index) => table_index.encode(v),
+            TableFill(table_index) => table_index.encode(v),
+            TableCopy {
+                dest_index,
+                src_index,
+            } => (dest_index, src_index).encode(v),
+            TableInit {
+                table_index,
+                elem_index,
+            } => (table_index, elem_index).encode(v),
+            ElemDrop(elem_index) => (elem_index).encode(v),
+            I32Load { align, offset }
+            | I64Load { align, offset }
+            | F32Load { align, offset }
+            | F64Load { align, offset }
+            | I32LoadS8 { align, offset }
+            | I32LoadU8 { align, offset }
+            | I32LoadS16 { align, offset }
+            | I32LoadU16 { align, offset }
+            | I64LoadS8 { align, offset }
+            | I64LoadU8 { align, offset }
+            | I64LoadS16 { align, offset }
+            | I64LoadU16 { align, offset }
+            | I64LoadS32 { align, offset }
+            | I64LoadU32 { align, offset }
+            | I32Store { align, offset }
+            | I64Store { align, offset }
+            | F32Store { align, offset }
+            | F64Store { align, offset }
+            | I32StoreI8 { align, offset }
+            | I32StoreI16 { align, offset }
+            | I64StoreI8 { align, offset }
+            | I64StoreI16 { align, offset }
+            | I64StoreI32 { align, offset } => (align, offset).encode(v),
+            MemorySize => 0.encode(v),
+            MemoryGrow => 0.encode(v),
+            MemoryInit(data_idx) => (data_idx, 0u8).encode(v),
+            DataDrop(data_idx) => (data_idx).encode(v),
+            MemoryCopy => [0u8, 0u8].encode(v),
+            MemoryFill => 0u8.encode(v),
+            I32Const(x) => x.encode(v),
+            I64Const(x) => x.encode(v),
+            F32Const(x) => x.encode(v),
+            F64Const(x) => x.encode(v),
+            V128Load { align, offset }
+            | V128LoadS8x8 { align, offset }
+            | V128LoadU8x8 { align, offset }
+            | V128LoadS16x4 { align, offset }
+            | V128LoadU16x4 { align, offset }
+            | V128LoadS32x2 { align, offset }
+            | V128LoadU32x2 { align, offset }
+            | V128LoadSplatI8 { align, offset }
+            | V128LoadSplatI16 { align, offset }
+            | V128LoadSplatI32 { align, offset }
+            | V128LoadSplatI64 { align, offset }
+            | V128LoadZeroI32 { align, offset }
+            | V128LoadZeroI64 { align, offset }
+            | V128Store { align, offset } => (align, offset).encode(v),
+            V128Load8Lane {
+                align,
+                offset,
+                lane,
+            }
+            | V128Load16Lane {
+                align,
+                offset,
+                lane,
+            }
+            | V128Load32Lane {
+                align,
+                offset,
+                lane,
+            }
+            | V128Load64Lane {
+                align,
+                offset,
+                lane,
+            }
+            | V128Store8Lane {
+                align,
+                offset,
+                lane,
+            }
+            | V128Store16Lane {
+                align,
+                offset,
+                lane,
+            }
+            | V128Store32Lane {
+                align,
+                offset,
+                lane,
+            }
+            | V128Store64Lane {
+                align,
+                offset,
+                lane,
+            } => (align, offset, lane).encode(v),
+            V128Const(bytes) => bytes.encode(v),
+            I8x16Shuffle { lanes } => lanes.encode(v),
+            S8x16ExtractLane { lane } => lane.encode(v),
+            U8x16ExtractLane { lane } => lane.encode(v),
+            I8x16ReplaceLane { lane } => lane.encode(v),
+            S16x8ExtractLane { lane } => lane.encode(v),
+            U16x8ExtractLane { lane } => lane.encode(v),
+            I16x8ReplaceLane { lane } => lane.encode(v),
+            I32x4ExtractLane { lane } => lane.encode(v),
+            I32x4ReplaceLane { lane } => lane.encode(v),
+            I64x2ExtractLane { lane } => lane.encode(v),
+            I64x2ReplaceLane { lane } => lane.encode(v),
+            F32x4ExtractLane { lane } => lane.encode(v),
+            F32x4ReplaceLane { lane } => lane.encode(v),
+            F64x2ExtractLane { lane } => lane.encode(v),
+            F64x2ReplaceLane { lane } => lane.encode(v),
+
+            // instructions that have no immediates are encoded just by their id
+            _ => (),
+        }
+    }
+}
+
+enum InstrId {
+    Single(u8),
+    Extended(u8, u32),
+}
+
+impl WasmEncode for InstrId {
+    fn size(&self) -> usize {
+        match *self {
+            InstrId::Single(_) => 1,
+            InstrId::Extended(_, y) => 1 + y.size(),
+        }
+    }
+
+    fn encode(&self, v: &mut Vec<u8>) {
+        match *self {
+            InstrId::Single(x) => x.encode(v),
+            InstrId::Extended(x, y) => (x, y).encode(v),
         }
     }
 }
