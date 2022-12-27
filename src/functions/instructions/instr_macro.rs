@@ -763,3 +763,10 @@ macro_rules! mlt {
         $x
     };
 }
+
+#[macro_export]
+macro_rules! expr {
+    ($(($($t:tt)*))*) => {
+        $crate::functions::Expr { instructions: vec![$($crate::instr!($($t)*),)*], }
+    };
+}
