@@ -801,34 +801,33 @@ macro_rules! mlt {
     };
 }
 
-/// A macro for creating [`Expr`](crate::functions::Expr)s with wat-like syntax
+/// A macro for creating arrays of [`Instruction`](crate::functions::Instructions)s 
+/// with wat-like syntax
 /// 
 /// Values can be interpolated with `{ /* ... */ }` in place of an instruction's
 /// immediate or type
 /// 
 /// ```
-/// # use wabam::{functions::{Expr, Instruction}, expr};
+/// # use wabam::{functions::Instruction, instrs};
 /// let x = 42;
-/// let ex = expr!(
+/// let expr = instrs!(
 ///     (local.get 0)
 ///     (i32.const { x })
 ///     (i32.eq)
 /// );
 /// 
 /// assert_eq!(
-///     ex,
-///     Expr {
-///         instructions: vec![
-///             Instruction::LocalGet(0),
-///             Instruction::I32Const(42),
-///             Instruction::I32Equal,
-///         ],
-///     }
+///     expr,
+///     [
+///         Instruction::LocalGet(0),
+///         Instruction::I32Const(42),
+///         Instruction::I32Equal,
+///     ],
 /// );
 /// ```
 #[macro_export]
-macro_rules! expr {
+macro_rules! instrs {
     ($(($($t:tt)*))*) => {
-        $crate::functions::Expr { instructions: vec![$($crate::instr!($($t)*),)*], }
+        [$($crate::instr!($($t)*),)*]
     };
 }
