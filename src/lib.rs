@@ -521,4 +521,11 @@ mod tests {
         assert_eq!(module.functions.len(), 1);
         assert_eq!(module.exports.len(), 1);
     }
+
+    #[test]
+    fn read_empty() {
+        let bytes = [0, b'a', b's', b'm', 1, 0, 0, 0];
+        let module = Module::load(&bytes).unwrap();
+        assert_eq!(module, Module::EMPTY);
+    }
 }
