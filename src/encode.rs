@@ -367,6 +367,33 @@ impl ErrorKind {
     }
 }
 
+impl std::fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            ErrorKind::BadHeader(found) => write!(f, "expected magic number \"\\0asm\", found {:?}", found),
+            ErrorKind::SectionOutOfOrder { prev, this } => write!(f, "section {} found after section {}", this, prev),
+            ErrorKind::InvalidSectionId(id) => write!(f, "found section with id {}", id),
+            ErrorKind::FuncWithoutCode => write!(f, "function section was found but code section was not"),
+            ErrorKind::CodeWithoutFunc => write!(f, "code section was found but function section was not"),
+            ErrorKind::FuncCodeMismatch { func_len, code_len } => write!(f, "function section length ({}b) is not equal to code section length ({}b)", func_len, code_len),
+            ErrorKind::TooShort => write!(f, "file ended before was expected"),
+            ErrorKind::BadBool => write!(f, "bool was not 0 or 1"),
+            ErrorKind::NumTooLong => write!(f, "number took too many bytes"),
+            ErrorKind::InvalidUtf8(ref e) => e.fmt(f),
+            ErrorKind::InvalidType(t) => write!(f, "type id {:#02X} is not valid", t),
+            ErrorKind::InvalidDiscriminant(d) => write!(f, "variant discriminant {:#02X} is not valid", d),
+            ErrorKind::InvalidInstruction(x, y) => {
+                match y {
+                    Some(y) => write!(f, "{x:#02X}-{y:08X} is not a valid instruction"),
+                    None => write!(f, "{x:#02X} is not a valid instruction"),
+                }
+            },
+        }
+    }
+}
+
+impl std::error::Error for ErrorKind {}
+
 impl From<std::string::FromUtf8Error> for ErrorKind {
     fn from(value: std::string::FromUtf8Error) -> Self {
         Self::InvalidUtf8(value)

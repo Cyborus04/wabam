@@ -36,6 +36,14 @@ impl Error {
     }
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "wasm parsing failed at {:#08X}: {}", self.offset, self.error)
+    }
+}
+
+impl std::error::Error for Error {}
+
 #[doc(hidden)]
 pub use functions::Instruction as I;
 
