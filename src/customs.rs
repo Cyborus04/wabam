@@ -1,5 +1,5 @@
 use crate::{
-    encode::{Buf, DecodeError, WasmDecode},
+    encode::{Buf, ErrorKind, WasmDecode},
     WasmEncode,
 };
 
@@ -21,7 +21,7 @@ impl WasmEncode for CustomSection {
 }
 
 impl WasmDecode for CustomSection {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let name = String::decode(buf)?;
         let data = buf.take_rest().to_vec();
         Ok(Self { name, data })

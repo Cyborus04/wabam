@@ -329,7 +329,7 @@ impl<'a> Buf<'a> {
 
 /// Errors that can happen when reading a wasm module.
 #[derive(Debug)]
-pub enum DecodeError {
+pub enum ErrorKind {
     /// The magic value of `\0asm\1\0\0\0` was not found at the start of the file.
     BadHeader([u8; 8]),
     /// Section appeared after when it should.
@@ -361,20 +361,20 @@ pub enum DecodeError {
     InvalidInstruction(u8, Option<u32>),
 }
 
-impl From<std::string::FromUtf8Error> for DecodeError {
+impl From<std::string::FromUtf8Error> for ErrorKind {
     fn from(value: std::string::FromUtf8Error) -> Self {
         Self::InvalidUtf8(value)
     }
 }
 
 pub(crate) trait WasmDecode {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError>
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind>
     where
         Self: Sized;
 }
 
 impl<T: WasmDecode, const N: usize> WasmDecode for [T; N] {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let mut out: MaybeUninit<[T; N]> = MaybeUninit::uninit();
         let ptr = out.as_mut_ptr().cast::<T>();
 
@@ -397,23 +397,23 @@ impl<T: WasmDecode, const N: usize> WasmDecode for [T; N] {
 }
 
 impl WasmDecode for u8 {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
-        buf.take_one().ok_or(DecodeError::TooShort)
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        buf.take_one().ok_or(ErrorKind::TooShort)
     }
 }
 
 impl WasmDecode for bool {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         match u8::decode(buf)? {
             0 => Ok(false),
             1 => Ok(true),
-            _ => Err(DecodeError::BadBool),
+            _ => Err(ErrorKind::BadBool),
         }
     }
 }
 
 impl WasmDecode for u32 {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let mut out = 0;
         for i in 0..5 {
             let b = u8::decode(buf)?;
@@ -422,12 +422,12 @@ impl WasmDecode for u32 {
                 return Ok(out);
             }
         }
-        Err(DecodeError::NumTooLong)
+        Err(ErrorKind::NumTooLong)
     }
 }
 
 impl WasmDecode for i32 {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let mut out = 0;
         for i in 0..5 {
             let b = u8::decode(buf)?;
@@ -441,12 +441,12 @@ impl WasmDecode for i32 {
                 return Ok(x as i32);
             }
         }
-        Err(DecodeError::NumTooLong)
+        Err(ErrorKind::NumTooLong)
     }
 }
 
 impl WasmDecode for u64 {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let mut out = 0;
         for i in 0..10 {
             let b = u8::decode(buf)?;
@@ -455,12 +455,12 @@ impl WasmDecode for u64 {
                 return Ok(out);
             }
         }
-        Err(DecodeError::NumTooLong)
+        Err(ErrorKind::NumTooLong)
     }
 }
 
 impl WasmDecode for i64 {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let mut out = 0;
         for i in 0..10 {
             let b = u8::decode(buf)?;
@@ -474,24 +474,24 @@ impl WasmDecode for i64 {
                 return Ok(x as i64);
             }
         }
-        Err(DecodeError::NumTooLong)
+        Err(ErrorKind::NumTooLong)
     }
 }
 
 impl WasmDecode for f32 {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         Ok(f32::from_le_bytes(<[u8; 4]>::decode(buf)?))
     }
 }
 
 impl WasmDecode for f64 {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         Ok(f64::from_le_bytes(<[u8; 8]>::decode(buf)?))
     }
 }
 
 impl<T: WasmDecode> WasmDecode for Vec<T> {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let len = u32::decode(buf)? as usize;
         let mut v = Vec::with_capacity(len);
         for _ in 0..len {
@@ -502,7 +502,7 @@ impl<T: WasmDecode> WasmDecode for Vec<T> {
 }
 
 impl WasmDecode for String {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let s = String::from_utf8(Vec::<u8>::decode(buf)?)?;
         Ok(s)
     }

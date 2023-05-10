@@ -1,5 +1,5 @@
 use crate::{
-    encode::{Buf, DecodeError, WasmDecode},
+    encode::{Buf, ErrorKind, WasmDecode},
     ValType, WasmEncode,
 };
 
@@ -52,11 +52,11 @@ impl Function {
     pub(crate) fn decode(
         func_buf: &mut Buf<'_>,
         code_buf: &mut Buf<'_>,
-    ) -> Result<Vec<Self>, DecodeError> {
+    ) -> Result<Vec<Self>, ErrorKind> {
         let func_len = u32::decode(func_buf)?;
         let code_len = u32::decode(code_buf)?;
         if func_len != code_len {
-            return Err(DecodeError::FuncCodeMismatch { func_len, code_len });
+            return Err(ErrorKind::FuncCodeMismatch { func_len, code_len });
         }
 
         let mut out = Vec::new();
@@ -120,10 +120,10 @@ impl WasmEncode for FuncType {
 }
 
 impl WasmDecode for FuncType {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         let tag = u8::decode(buf)?;
         if tag != 0x60 {
-            return Err(DecodeError::InvalidDiscriminant(tag));
+            return Err(ErrorKind::InvalidDiscriminant(tag));
         }
         let inputs = Vec::<ValType>::decode(buf)?;
         let outputs = Vec::<ValType>::decode(buf)?;

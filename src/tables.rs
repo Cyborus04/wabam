@@ -1,5 +1,5 @@
 use crate::{
-    encode::{DecodeError, WasmDecode},
+    encode::{ErrorKind, WasmDecode},
     Expr, Limit, RefType, WasmEncode,
 };
 
@@ -21,7 +21,7 @@ impl WasmEncode for TableType {
 }
 
 impl WasmDecode for TableType {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, ErrorKind> {
         let ref_type = RefType::decode(buf)?;
         let limits = Limit::decode(buf)?;
         Ok(Self { ref_type, limits })
@@ -41,13 +41,13 @@ pub enum ElemKind {
 }
 
 impl WasmDecode for ElemKind {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, DecodeError>
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, ErrorKind>
     where
         Self: Sized {
         let d = u8::decode(buf)?;
         match d {
             0 => Ok(Self::FuncRef),
-            _ => Err(DecodeError::InvalidType(d)),
+            _ => Err(ErrorKind::InvalidType(d)),
         }
     }
 }
@@ -260,7 +260,7 @@ impl WasmEncode for Element {
 }
 
 impl WasmDecode for Element {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, ErrorKind> {
         use ElemInit::*;
         use ElemMode::*;
 
@@ -348,7 +348,7 @@ impl WasmDecode for Element {
                     mode: Passive,
                 }
             }
-            _ => return Err(DecodeError::InvalidDiscriminant(d)),
+            _ => return Err(ErrorKind::InvalidDiscriminant(d)),
         };
 
         Ok(elem)

@@ -21,7 +21,7 @@ impl WasmEncode for Expr {
 }
 
 impl WasmDecode for Expr {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         use Instruction::*;
 
         let mut instrs = Vec::new();
@@ -1833,7 +1833,7 @@ impl WasmEncode for Instruction {
 }
 
 impl WasmDecode for Instruction {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         use InstrId::*;
         use Instruction::*;
 
@@ -2462,7 +2462,7 @@ impl WasmDecode for Instruction {
             Extended(0xFD, 95) => F64x2PromoteLowF32x4,
             _ => {
                 let (x, y) = id.deconstruct();
-                return Err(crate::encode::DecodeError::InvalidInstruction(x, y))
+                return Err(crate::encode::ErrorKind::InvalidInstruction(x, y))
             },
         };
         Ok(instr)
@@ -2500,7 +2500,7 @@ impl WasmEncode for InstrId {
 }
 
 impl WasmDecode for InstrId {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         let b = u8::decode(buf)?;
         match b {
             0xFC | 0xFD => Ok(Self::Extended(b, u32::decode(buf)?)),

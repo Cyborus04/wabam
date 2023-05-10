@@ -15,7 +15,7 @@ use interface::*;
 use tables::*;
 pub use val_types::*;
 
-pub use encode::DecodeError as ErrorKind;
+pub use encode::ErrorKind;
 
 /// An error that occured when reading a module, and where.
 #[derive(Debug)]
@@ -177,10 +177,10 @@ impl WasmEncode for Module {
 }
 
 impl WasmDecode for Module {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let header = <[u8; 8]>::decode(buf)?;
         if header != HEADER {
-            return Err(DecodeError::BadHeader(header));
+            return Err(ErrorKind::BadHeader(header));
         }
 
         let mut customs = Vec::new();
@@ -200,10 +200,10 @@ impl WasmDecode for Module {
         while !buf.exhausted() {
             let section_id = u8::decode(buf)?;
             if section_id > 0 && section_id <= last_section {
-                return Err(DecodeError::SectionOutOfOrder { prev: last_section, this: section_id });
+                return Err(ErrorKind::SectionOutOfOrder { prev: last_section, this: section_id });
             }
             let len = u32::decode(buf)?;
-            let section_bytes = buf.take(len as usize).ok_or(DecodeError::TooShort)?;
+            let section_bytes = buf.take(len as usize).ok_or(ErrorKind::TooShort)?;
             let section_buf = Buf::with_consumed(section_bytes, buf.consumed());
             match section_id {
                 0 => customs.push(section_buf),
@@ -218,13 +218,13 @@ impl WasmDecode for Module {
                 9 => elems = Some(section_buf),
                 10 => code = Some(section_buf),
                 11 => datas = Some(section_buf),
-                _ => return Err(DecodeError::InvalidSectionId(section_id)),
+                _ => return Err(ErrorKind::InvalidSectionId(section_id)),
             }
 
             last_section = section_id;
         }
 
-        fn load_section<T: WasmDecode + Default>(buf: Option<Buf>) -> Result<T, DecodeError> {
+        fn load_section<T: WasmDecode + Default>(buf: Option<Buf>) -> Result<T, ErrorKind> {
             Ok(buf.map(|mut buf| T::decode(&mut buf)).transpose()?.unwrap_or_default())
         }
 
@@ -241,8 +241,8 @@ impl WasmDecode for Module {
 
         let functions = match (functions, code) {
             (None, None) => Vec::new(),
-            (None, Some(_)) => return Err(DecodeError::FuncWithoutCode),
-            (Some(_), None) => return Err(DecodeError::CodeWithoutFunc),
+            (None, Some(_)) => return Err(ErrorKind::FuncWithoutCode),
+            (Some(_), None) => return Err(ErrorKind::CodeWithoutFunc),
             (Some(mut functions), Some(mut code)) => {
                 Function::decode(&mut functions, &mut code)?
             },
@@ -297,7 +297,7 @@ impl WasmEncode for Limit {
 }
 
 impl WasmDecode for Limit {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let d = u8::decode(buf)?;
         match d {
             0 => Ok(Self {
@@ -308,7 +308,7 @@ impl WasmDecode for Limit {
                 start: u32::decode(buf)?,
                 end: Some(u32::decode(buf)?),
             }),
-            _ => Err(DecodeError::InvalidDiscriminant(d)),
+            _ => Err(ErrorKind::InvalidDiscriminant(d)),
         }
     }
 }
@@ -331,7 +331,7 @@ impl WasmEncode for GlobalType {
 }
 
 impl WasmDecode for GlobalType {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let mutable = bool::decode(buf)?;
         let vtype = ValType::decode(buf)?;
         Ok(Self { mutable, vtype })
@@ -356,7 +356,7 @@ impl WasmEncode for Global {
 }
 
 impl WasmDecode for Global {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let global_type = GlobalType::decode(buf)?;
         let expr = Expr::decode(buf)?;
         Ok(Self { global_type, expr })
@@ -422,13 +422,13 @@ impl WasmEncode for Data {
 }
 
 impl WasmDecode for Data {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let d = u8::decode(buf)?;
         let data = match d {
             0 => Self::Active { mem_index: 0, offset: Expr::decode(buf)?, data: Vec::<u8>::decode(buf)? },
             1 => Self::Passive(Vec::<u8>::decode(buf)?),
             2 => Self::Active { mem_index: u32::decode(buf)?, offset: Expr::decode(buf)?, data: Vec::<u8>::decode(buf)? },
-            _ => return Err(DecodeError::InvalidDiscriminant(d))
+            _ => return Err(ErrorKind::InvalidDiscriminant(d))
         };
         Ok(data)
     }

@@ -24,7 +24,7 @@ impl WasmEncode for Import {
 }
 
 impl WasmDecode for Import {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         let module = String::decode(buf)?;
         let name = String::decode(buf)?;
         let desc = ImportDesc::decode(buf)?;
@@ -75,7 +75,7 @@ impl WasmEncode for ImportDesc {
 }
 
 impl WasmDecode for ImportDesc {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         let d = u8::decode(buf)?;
         match d {
             0 => Ok(Self::Func {
@@ -90,7 +90,7 @@ impl WasmDecode for ImportDesc {
             3 => Ok(Self::Global {
                 global_type: GlobalType::decode(buf)?,
             }),
-            _ => Err(crate::encode::DecodeError::InvalidDiscriminant(d)),
+            _ => Err(crate::encode::ErrorKind::InvalidDiscriminant(d)),
         }
     }
 }
@@ -113,7 +113,7 @@ impl WasmEncode for Export {
 }
 
 impl WasmDecode for Export {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         let name = String::decode(buf)?;
         let desc = ExportDesc::decode(buf)?;
         Ok(Self { name, desc })
@@ -161,7 +161,7 @@ impl WasmEncode for ExportDesc {
 }
 
 impl WasmDecode for ExportDesc {
-    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
         let d = u8::decode(buf)?;
         match d {
             0 => Ok(Self::Func {
@@ -176,7 +176,7 @@ impl WasmDecode for ExportDesc {
             3 => Ok(Self::Global {
                 global_idx: u32::decode(buf)?,
             }),
-            _ => Err(crate::encode::DecodeError::InvalidDiscriminant(d)),
+            _ => Err(crate::encode::ErrorKind::InvalidDiscriminant(d)),
         }
     }
 }
