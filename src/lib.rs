@@ -112,11 +112,12 @@ impl Module {
                 .at(buf));
             }
             let len = u32::decode(buf).map_err(|e| e.at(buf))?;
+            let section_start = buf.consumed();
             let section_bytes = buf
                 .take(len as usize)
                 .ok_or(ErrorKind::TooShort)
                 .map_err(|e| e.at(buf))?;
-            let section_buf = Buf::with_consumed(section_bytes, buf.consumed());
+            let section_buf = Buf::with_consumed(section_bytes, section_start);
             match section_id {
                 0 => customs.push(section_buf),
                 1 => types = Some(section_buf),
