@@ -355,8 +355,6 @@ pub enum DecodeError {
     InvalidUtf8(std::string::FromUtf8Error),
     /// Unknown type id
     InvalidType(u8),
-    /// Expected a certain byte but did not find it
-    ExpectedByte { expected: u8, found: u8 },
     /// Unknown variant found
     InvalidDiscriminant(u8),
     /// Unknown instruction found

@@ -123,10 +123,7 @@ impl WasmDecode for FuncType {
     fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
         let tag = u8::decode(buf)?;
         if tag != 0x60 {
-            return Err(DecodeError::ExpectedByte {
-                expected: 0x60,
-                found: tag,
-            });
+            return Err(DecodeError::InvalidDiscriminant(tag));
         }
         let inputs = Vec::<ValType>::decode(buf)?;
         let outputs = Vec::<ValType>::decode(buf)?;
