@@ -1,8 +1,8 @@
 /// A macro for creating [`Instruction`](crate::functions::Instruction)s with wat-like syntax
-/// 
+///
 /// Values can be interpolated with `{ /* ... */ }` in place of an instruction's
 /// immediate or type
-/// 
+///
 /// ```
 /// # use wabam::{functions::Instruction, instr};
 /// let x = 42;
@@ -801,12 +801,12 @@ macro_rules! mlt {
     };
 }
 
-/// A macro for creating arrays of [`Instruction`](crate::functions::Instructions)s 
+/// A macro for creating arrays of [`Instruction`](crate::functions::Instructions)s
 /// with wat-like syntax
-/// 
+///
 /// Values can be interpolated with `{ /* ... */ }` in place of an instruction's
 /// immediate or type
-/// 
+///
 /// ```
 /// # use wabam::{functions::Instruction, instrs};
 /// let x = 42;
@@ -815,7 +815,7 @@ macro_rules! mlt {
 ///     (i32.const { x })
 ///     (i32.eq)
 /// );
-/// 
+///
 /// assert_eq!(
 ///     expr,
 ///     [

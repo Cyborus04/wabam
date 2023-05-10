@@ -5,15 +5,35 @@ mod val_types;
 
 pub mod customs;
 pub mod functions;
-pub mod tables;
 pub mod interface;
+pub mod tables;
 
 use customs::CustomSection;
-use functions::*;
-use tables::*;
-use interface::*;
 use encode::*;
+use functions::*;
+use interface::*;
+use tables::*;
 pub use val_types::*;
+
+pub use encode::DecodeError as ErrorKind;
+
+#[derive(Debug)]
+pub struct Error {
+    offset: usize,
+    error: ErrorKind,
+}
+
+impl Error {
+    /// Where in the file the error is
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
+    /// What error occured
+    pub fn kind(&self) -> &ErrorKind {
+        &self.error
+    }
+}
 
 #[doc(hidden)]
 pub use functions::Instruction as I;
@@ -55,6 +75,14 @@ impl Module {
         self.encode(&mut v);
         v
     }
+
+    pub fn load(data: &[u8]) -> Result<Self, Error> {
+        let mut buf = Buf::new(data);
+        Module::decode(&mut buf).map_err(|e| Error {
+            offset: buf.error_location(),
+            error: e,
+        })
+    }
 }
 
 impl Default for Module {
@@ -65,7 +93,11 @@ impl Default for Module {
 
 impl WasmEncode for Module {
     fn size(&self) -> usize {
-        let customs_size = self.custom_sections.iter().map(|c| 1 + c.size()).sum::<usize>();
+        let customs_size = self
+            .custom_sections
+            .iter()
+            .map(|c| 1 + c.size())
+            .sum::<usize>();
         let type_size = 1 + self.types.size();
         let import_size = 1 + self.imports.size();
         let func_size = 1 + Function::size_func(&self.functions);
@@ -143,6 +175,96 @@ impl WasmEncode for Module {
     }
 }
 
+impl WasmDecode for Module {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let header = <[u8; 8]>::decode(buf)?;
+        if header != HEADER {
+            return Err(DecodeError::BadHeader(header));
+        }
+
+        let mut customs = Vec::new();
+        let mut types = None;
+        let mut imports = None;
+        let mut functions = None;
+        let mut tables = None;
+        let mut memories = None;
+        let mut globals = None;
+        let mut exports = None;
+        let mut start = None;
+        let mut elems = None;
+        let mut code = None;
+        let mut datas = None;
+
+        let mut last_section = 0;
+        while !buf.exhausted() {
+            let section_id = u8::decode(buf)?;
+            if section_id > 0 && section_id <= last_section {
+                return Err(DecodeError::SectionOutOfOrder { prev: last_section, this: section_id });
+            }
+            let len = u32::decode(buf)?;
+            let section_bytes = buf.take(len as usize).ok_or(DecodeError::TooShort)?;
+            let section_buf = Buf::with_consumed(section_bytes, buf.consumed());
+            match section_id {
+                0 => customs.push(section_buf),
+                1 => types = Some(section_buf),
+                2 => imports = Some(section_buf),
+                3 => functions = Some(section_buf),
+                4 => tables = Some(section_buf),
+                5 => memories = Some(section_buf),
+                6 => globals = Some(section_buf),
+                7 => exports = Some(section_buf),
+                8 => start = Some(section_buf),
+                9 => elems = Some(section_buf),
+                10 => code = Some(section_buf),
+                11 => datas = Some(section_buf),
+                _ => return Err(DecodeError::InvalidSectionId(section_id)),
+            }
+
+            last_section = section_id;
+        }
+
+        fn load_section<T: WasmDecode + Default>(buf: Option<Buf>) -> Result<T, DecodeError> {
+            Ok(buf.map(|mut buf| T::decode(&mut buf)).transpose()?.unwrap_or_default())
+        }
+
+        let customs = customs.into_iter().map(|mut buf| CustomSection::decode(&mut buf)).collect::<Result<Vec<_>, _>>()?;
+        let types = load_section::<Vec<FuncType>>(types)?;
+        let imports = load_section::<Vec<Import>>(imports)?;
+        let tables = load_section::<Vec<TableType>>(tables)?;
+        let memories = load_section::<Vec<Limit>>(memories)?;
+        let globals = load_section::<Vec<Global>>(globals)?;
+        let exports = load_section::<Vec<Export>>(exports)?;
+        let start = start.map(|mut buf| u32::decode(&mut buf)).transpose()?;
+        let elems = load_section::<Vec<Element>>(elems)?;
+        let datas = load_section::<Vec<Data>>(datas)?;
+
+        let functions = match (functions, code) {
+            (None, None) => Vec::new(),
+            (None, Some(_)) => return Err(DecodeError::FuncWithoutCode),
+            (Some(_), None) => return Err(DecodeError::CodeWithoutFunc),
+            (Some(mut functions), Some(mut code)) => {
+                Function::decode(&mut functions, &mut code)?
+            },
+        };
+
+        let module = Self {
+            custom_sections: customs,
+            types,
+            imports,
+            functions,
+            tables,
+            memories,
+            globals,
+            exports,
+            start,
+            elems,
+            datas,
+        };
+
+        Ok(module)
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Limit {
     pub start: u32,
@@ -173,6 +295,23 @@ impl WasmEncode for Limit {
     }
 }
 
+impl WasmDecode for Limit {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let d = u8::decode(buf)?;
+        match d {
+            0 => Ok(Self {
+                start: u32::decode(buf)?,
+                end: None,
+            }),
+            1 => Ok(Self {
+                start: u32::decode(buf)?,
+                end: Some(u32::decode(buf)?),
+            }),
+            _ => Err(DecodeError::InvalidDiscriminant(d)),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct GlobalType {
     pub mutable: bool,
@@ -190,6 +329,14 @@ impl WasmEncode for GlobalType {
     }
 }
 
+impl WasmDecode for GlobalType {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let mutable = bool::decode(buf)?;
+        let vtype = ValType::decode(buf)?;
+        Ok(Self { mutable, vtype })
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct Global {
     pub global_type: GlobalType,
@@ -204,6 +351,14 @@ impl WasmEncode for Global {
     fn encode(&self, v: &mut Vec<u8>) {
         self.global_type.encode(v);
         self.expr.encode(v);
+    }
+}
+
+impl WasmDecode for Global {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let global_type = GlobalType::decode(buf)?;
+        let expr = Expr::decode(buf)?;
+        Ok(Self { global_type, expr })
     }
 }
 
@@ -265,6 +420,19 @@ impl WasmEncode for Data {
     }
 }
 
+impl WasmDecode for Data {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let d = u8::decode(buf)?;
+        let data = match d {
+            0 => Self::Active { mem_index: 0, offset: Expr::decode(buf)?, data: Vec::<u8>::decode(buf)? },
+            1 => Self::Passive(Vec::<u8>::decode(buf)?),
+            2 => Self::Active { mem_index: u32::decode(buf)?, offset: Expr::decode(buf)?, data: Vec::<u8>::decode(buf)? },
+            _ => return Err(DecodeError::InvalidDiscriminant(d))
+        };
+        Ok(data)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,7 +466,8 @@ mod tests {
                     Instruction::Call(0),
                     Instruction::I64Mul,
                     Instruction::End,
-                ].into(),
+                ]
+                .into(),
             }],
 
             exports: vec![Export {
@@ -316,22 +485,37 @@ mod tests {
 
     #[test]
     fn macros() {
-        assert_eq!(
-            func_type!(),
-            FuncType::default(),
-        );
+        assert_eq!(func_type!(), FuncType::default(),);
         assert_eq!(
             func_type!((param i32)),
-            FuncType { inputs: vec![ValType::I32], outputs: vec![] }
+            FuncType {
+                inputs: vec![ValType::I32],
+                outputs: vec![]
+            }
         );
         assert_eq!(
             func_type!((result i32)),
-            FuncType { inputs: vec![], outputs: vec![ValType::I32] }
+            FuncType {
+                inputs: vec![],
+                outputs: vec![ValType::I32]
+            }
         );
         let ty = ValType::F32;
         assert_eq!(
             func_type!((param i64 { ty }) (result f64)),
-            FuncType { inputs: vec![ValType::I64, ValType::F32], outputs: vec![ValType::F64] }
+            FuncType {
+                inputs: vec![ValType::I64, ValType::F32],
+                outputs: vec![ValType::F64]
+            }
         );
+    }
+
+    #[test]
+    fn read_factorial() {
+        let bytes = std::fs::read("./src/tests/fac.wasm").unwrap();
+        let module = Module::load(&bytes).unwrap();
+        assert_eq!(module.types.len(), 1);
+        assert_eq!(module.functions.len(), 1);
+        assert_eq!(module.exports.len(), 1);
     }
 }

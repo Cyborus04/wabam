@@ -1,4 +1,4 @@
-use crate::encode::WasmEncode;
+use crate::encode::{Buf, DecodeError, WasmDecode, WasmEncode};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ValType {
@@ -54,6 +54,38 @@ impl WasmEncode for Option<ValType> {
     }
 }
 
+impl WasmDecode for ValType {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let b = u8::decode(buf)?;
+        match b {
+            0x7F => Ok(Self::I32),
+            0x7E => Ok(Self::I64),
+            0x7D => Ok(Self::F32),
+            0x7C => Ok(Self::F64),
+            0x70 => Ok(Self::FuncRef),
+            0x6F => Ok(Self::ExternRef),
+            0x7B => Ok(Self::V128),
+            x => Err(DecodeError::InvalidType(x)),
+        }
+    }
+}
+
+impl WasmDecode for Option<ValType> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        match u8::decode(buf)? {
+            0x7F => Ok(Some(ValType::I32)),
+            0x7E => Ok(Some(ValType::I64)),
+            0x7D => Ok(Some(ValType::F32)),
+            0x7C => Ok(Some(ValType::F64)),
+            0x70 => Ok(Some(ValType::FuncRef)),
+            0x6F => Ok(Some(ValType::ExternRef)),
+            0x7B => Ok(Some(ValType::V128)),
+            0x40 => Ok(None),
+            x => Err(DecodeError::InvalidType(x)),
+        }
+    }
+}
+
 impl PartialOrd for ValType {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -91,12 +123,34 @@ impl WasmEncode for RefType {
     }
 }
 
+impl WasmDecode for RefType {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        match u8::decode(buf)? {
+            0x70 => Ok(Self::FuncRef),
+            0x6F => Ok(Self::ExternRef),
+            x => Err(DecodeError::InvalidType(x)),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NumType {
     I32,
     I64,
     F32,
     F64,
+}
+
+impl WasmDecode for NumType {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        match u8::decode(buf)? {
+            0x7F => Ok(Self::I32),
+            0x7E => Ok(Self::I64),
+            0x7D => Ok(Self::F32),
+            0x7C => Ok(Self::F64),
+            x => Err(DecodeError::InvalidType(x)),
+        }
+    }
 }
 
 impl NumType {
@@ -119,5 +173,14 @@ pub enum VecType {
 impl VecType {
     pub fn type_id(self) -> u8 {
         0x7B
+    }
+}
+
+impl WasmDecode for VecType {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        match u8::decode(buf)? {
+            0x7B => Ok(Self::V128),
+            x => Err(DecodeError::InvalidType(x)),
+        }
     }
 }

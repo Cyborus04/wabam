@@ -1,4 +1,7 @@
-use crate::{ValType, WasmEncode};
+use crate::{
+    encode::{Buf, DecodeError, WasmDecode},
+    ValType, WasmEncode,
+};
 
 mod instructions;
 pub use instructions::*;
@@ -12,10 +15,7 @@ pub struct Function {
 
 impl Function {
     pub(crate) fn size_func(these: &[Self]) -> usize {
-        let size = these
-            .iter()
-            .map(|func| func.type_idx.size())
-            .sum::<usize>();
+        let size = these.iter().map(|func| func.type_idx.size()).sum::<usize>();
 
         size + (these.len() as u32).size()
     }
@@ -48,6 +48,39 @@ impl Function {
             func.body.encode(v);
         }
     }
+
+    pub(crate) fn decode(
+        func_buf: &mut Buf<'_>,
+        code_buf: &mut Buf<'_>,
+    ) -> Result<Vec<Self>, DecodeError> {
+        let func_len = u32::decode(func_buf)?;
+        let code_len = u32::decode(code_buf)?;
+        if func_len != code_len {
+            return Err(DecodeError::FuncCodeMismatch { func_len, code_len });
+        }
+
+        let mut out = Vec::new();
+        for _ in 0..func_len {
+            let type_idx = u32::decode(func_buf)?;
+
+
+            let _code_size = u32::decode(code_buf)?;
+
+            let mut locals = Vec::new();
+            let local_len = u32::decode(code_buf)?;
+            for _ in 0..local_len {
+                let count = u32::decode(code_buf)?;
+                let val_type = ValType::decode(code_buf)?;
+                locals.extend(std::iter::repeat(val_type).take(count as usize));
+            }
+
+            let body = Expr::decode(code_buf)?;
+
+            out.push(Function { type_idx, locals, body });
+        }
+
+        Ok(out)
+    }
 }
 
 fn compress_locals(locals: &[ValType]) -> Vec<(u32, ValType)> {
@@ -61,7 +94,6 @@ fn compress_locals(locals: &[ValType]) -> Vec<(u32, ValType)> {
     locals_compressed
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct FuncType {
     pub inputs: Vec<ValType>,
@@ -69,7 +101,10 @@ pub struct FuncType {
 }
 
 impl FuncType {
-    pub const EMPTY: Self = Self { inputs: vec![], outputs: vec![] };
+    pub const EMPTY: Self = Self {
+        inputs: vec![],
+        outputs: vec![],
+    };
 }
 
 impl WasmEncode for FuncType {
@@ -81,6 +116,21 @@ impl WasmEncode for FuncType {
         v.push(0x60);
         self.inputs.encode(v);
         self.outputs.encode(v);
+    }
+}
+
+impl WasmDecode for FuncType {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::DecodeError> {
+        let tag = u8::decode(buf)?;
+        if tag != 0x60 {
+            return Err(DecodeError::ExpectedByte {
+                expected: 0x60,
+                found: tag,
+            });
+        }
+        let inputs = Vec::<ValType>::decode(buf)?;
+        let outputs = Vec::<ValType>::decode(buf)?;
+        Ok(Self { inputs, outputs })
     }
 }
 

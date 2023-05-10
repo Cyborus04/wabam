@@ -1,3 +1,4 @@
+use std::mem::MaybeUninit;
 
 pub(crate) trait WasmEncode {
     fn size(&self) -> usize;
@@ -261,5 +262,235 @@ impl WasmEncode for f64 {
 
     fn encode(&self, v: &mut Vec<u8>) {
         v.extend(self.to_le_bytes())
+    }
+}
+
+pub(crate) struct Buf<'a> {
+    buf: &'a [u8],
+    consumed: usize,
+    prev_consumed: usize,
+}
+
+impl<'a> Buf<'a> {
+    pub fn new(buf: &'a [u8]) -> Self {
+        Self {
+            buf,
+            consumed: 0,
+            prev_consumed: 0,
+        }
+    }
+
+    pub fn with_consumed(buf: &'a [u8], consumed: usize) -> Self {
+        Self {
+            buf,
+            consumed,
+            prev_consumed: consumed,
+        }
+    }
+
+    pub fn take(&mut self, n: usize) -> Option<&'a [u8]> {
+        if n > self.buf.len() {
+            return None;
+        }
+        let (ret, new_self) = self.buf.split_at(n);
+        self.buf = new_self;
+        self.prev_consumed = self.consumed;
+        self.consumed += ret.len();
+        Some(ret)
+    }
+
+    pub fn take_one(&mut self) -> Option<u8> {
+        let (ret, new_self) = self.buf.split_first()?;
+        self.buf = new_self;
+        self.prev_consumed = self.consumed;
+        self.consumed += 1;
+        Some(*ret)
+    }
+
+    pub fn take_rest(&mut self) -> &[u8] {
+        let x = std::mem::take(&mut self.buf);
+        self.prev_consumed = self.consumed;
+        self.consumed += x.len();
+        x
+    }
+
+    pub fn consumed(&self) -> usize {
+        self.consumed
+    }
+
+    pub fn error_location(&self) -> usize {
+        self.prev_consumed
+    }
+
+    pub fn exhausted(&self) -> bool {
+        self.buf.is_empty()
+    }
+}
+
+#[derive(Debug)]
+pub enum DecodeError {
+    BadHeader([u8; 8]),
+    SectionOutOfOrder { prev: u8, this: u8 },
+    InvalidSectionId(u8),
+    FuncWithoutCode,
+    CodeWithoutFunc,
+    FuncCodeMismatch {
+        func_len: u32,
+        code_len: u32,
+    },
+    TooShort,
+    BadBool,
+    NumTooLong,
+    InvalidUtf8(std::string::FromUtf8Error),
+    InvalidType(u8),
+    ExpectedByte { expected: u8, found: u8 },
+    InvalidDiscriminant(u8),
+    InvalidInstruction(u8, Option<u32>),
+}
+
+impl From<std::string::FromUtf8Error> for DecodeError {
+    fn from(value: std::string::FromUtf8Error) -> Self {
+        Self::InvalidUtf8(value)
+    }
+}
+
+pub(crate) trait WasmDecode {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError>
+    where
+        Self: Sized;
+}
+
+impl<T: WasmDecode, const N: usize> WasmDecode for [T; N] {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let mut out: MaybeUninit<[T; N]> = MaybeUninit::uninit();
+        let ptr = out.as_mut_ptr().cast::<T>();
+
+        for i in 0..N {
+            let x = T::decode(buf);
+            match x {
+                Ok(x) => unsafe { ptr.add(i).write(x) },
+                Err(e) => {
+                    // Drop all previously decoded elements
+                    let init = std::ptr::slice_from_raw_parts_mut(ptr, i);
+                    unsafe { std::ptr::drop_in_place(init) };
+
+                    return Err(e);
+                }
+            }
+        }
+
+        Ok(unsafe { out.assume_init() })
+    }
+}
+
+impl WasmDecode for u8 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        buf.take_one().ok_or(DecodeError::TooShort)
+    }
+}
+
+impl WasmDecode for bool {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        match u8::decode(buf)? {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(DecodeError::BadBool),
+        }
+    }
+}
+
+impl WasmDecode for u32 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let mut out = 0;
+        for i in 0..5 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u32) << (i * 7);
+            if b & 0x80 == 0 {
+                return Ok(out);
+            }
+        }
+        Err(DecodeError::NumTooLong)
+    }
+}
+
+impl WasmDecode for i32 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let mut out = 0;
+        for i in 0..5 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u32).wrapping_shl(i * 7);
+            if b & 0x80 == 0 {
+                let x = if b & 0x40 == 0 {
+                    out
+                } else {
+                    out | (u32::MAX.wrapping_shl(i * 7))
+                };
+                return Ok(x as i32);
+            }
+        }
+        Err(DecodeError::NumTooLong)
+    }
+}
+
+impl WasmDecode for u64 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let mut out = 0;
+        for i in 0..10 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u64) << (i * 7);
+            if b & 0x80 == 0 {
+                return Ok(out);
+            }
+        }
+        Err(DecodeError::NumTooLong)
+    }
+}
+
+impl WasmDecode for i64 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let mut out = 0;
+        for i in 0..10 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u64).wrapping_shl(i * 7);
+            if b & 0x80 == 0 {
+                let x = if b & 0x40 == 0 {
+                    out
+                } else {
+                    out | (u64::MAX.wrapping_shl(i * 7))
+                };
+                return Ok(x as i64);
+            }
+        }
+        Err(DecodeError::NumTooLong)
+    }
+}
+
+impl WasmDecode for f32 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        Ok(f32::from_le_bytes(<[u8; 4]>::decode(buf)?))
+    }
+}
+
+impl WasmDecode for f64 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        Ok(f64::from_le_bytes(<[u8; 8]>::decode(buf)?))
+    }
+}
+
+impl<T: WasmDecode> WasmDecode for Vec<T> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let len = u32::decode(buf)? as usize;
+        let mut v = Vec::with_capacity(len);
+        for _ in 0..len {
+            v.push(T::decode(buf)?);
+        }
+        Ok(v)
+    }
+}
+
+impl WasmDecode for String {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, DecodeError> {
+        let s = String::from_utf8(Vec::<u8>::decode(buf)?)?;
+        Ok(s)
     }
 }
