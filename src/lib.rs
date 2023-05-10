@@ -18,6 +18,22 @@ pub use val_types::*;
 pub use encode::ErrorKind;
 
 /// An error that occured when reading a module, and where.
+/// # Example
+/// ```
+/// # use wabam::{Module, ErrorKind};
+/// let bytes = [1, 2, 3, 4, 5, 6, 7, 8];
+/// 
+/// let err = Module::load(&bytes).unwrap_err();
+/// assert_eq!(err.kind(), &ErrorKind::BadHeader(bytes));
+/// ```
+/// 
+/// ```
+/// # use wabam::{Module, ErrorKind};
+/// let bytes = [1, 2, 3, 4, 5];
+/// 
+/// let err = Module::load(&bytes).unwrap_err();
+/// assert_eq!(err.kind(), &ErrorKind::TooShort);
+/// ```
 #[derive(Debug, PartialEq, Eq)]
 pub struct Error {
     offset: usize,
