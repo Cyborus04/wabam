@@ -328,7 +328,7 @@ impl<'a> Buf<'a> {
 }
 
 /// Errors that can happen when reading a wasm module.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ErrorKind {
     /// The magic value of `\0asm\1\0\0\0` was not found at the start of the file.
     BadHeader([u8; 8]),
