@@ -20,6 +20,7 @@ pub use functions::Instruction as I;
 
 const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 
+#[derive(PartialEq, Debug, Clone)]
 pub struct Module {
     pub custom_sections: Vec<CustomSection>,
     pub types: Vec<FuncType>,
@@ -142,6 +143,7 @@ impl WasmEncode for Module {
     }
 }
 
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Limit {
     pub start: u32,
     pub end: Option<u32>,
@@ -171,6 +173,7 @@ impl WasmEncode for Limit {
     }
 }
 
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct GlobalType {
     pub mutable: bool,
     pub vtype: ValType,
@@ -187,6 +190,7 @@ impl WasmEncode for GlobalType {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
 pub struct Global {
     pub global_type: GlobalType,
     pub expr: Expr,
@@ -203,6 +207,7 @@ impl WasmEncode for Global {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
 pub enum Data {
     Active {
         mem_index: u32,

@@ -1,6 +1,7 @@
 use crate::{RefType, Limit, WasmEncode, Expr};
 
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct TableType {
     pub ref_type: RefType,
     pub limits: Limit,
@@ -17,7 +18,7 @@ impl WasmEncode for TableType {
     }
 }
 
-
+#[derive(PartialEq, Debug, Clone)]
 pub struct Element {
     pub kind: ElemKind,
     pub init: ElemInit,
@@ -29,11 +30,13 @@ pub enum ElemKind {
     FuncRef,
 }
 
+#[derive(PartialEq, Debug, Clone)]
 pub enum ElemInit {
     Indices(Vec<u32>),
     Expressions(Vec<Expr>),
 }
 
+#[derive(PartialEq, Debug, Clone)]
 pub enum ElemMode {
     Active { table_idx: u32, offset: Expr },
     Passive,

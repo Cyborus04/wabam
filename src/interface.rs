@@ -1,5 +1,6 @@
 use crate::{encode::WasmEncode, tables::TableType, Limit, GlobalType};
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Import {
     pub module: String,
     pub name: String,
@@ -18,6 +19,7 @@ impl WasmEncode for Import {
     }
 }
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum ImportDesc {
     Func { type_idx: u32 },
     Table { table_type: TableType },
@@ -59,7 +61,7 @@ impl WasmEncode for ImportDesc {
     }
 }
 
-
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Export {
     pub name: String,
     pub desc: ExportDesc,
@@ -76,6 +78,7 @@ impl WasmEncode for Export {
     }
 }
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum ExportDesc {
     Func { func_idx: u32 },
     Table { table_idx: u32 },
