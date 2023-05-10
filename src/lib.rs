@@ -79,10 +79,101 @@ impl Module {
 
     pub fn load(data: &[u8]) -> Result<Self, Error> {
         let mut buf = Buf::new(data);
-        Module::decode(&mut buf).map_err(|e| Error {
-            offset: buf.error_location(),
-            error: e,
-        })
+        Module::decode(&mut buf)
+    }
+
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, Error> {
+        let header = <[u8; 8]>::decode(buf).map_err(|e| e.at(buf))?;
+        if header != HEADER {
+            return Err(ErrorKind::BadHeader(header).at(buf));
+        }
+
+        let mut customs = Vec::new();
+        let mut types = None;
+        let mut imports = None;
+        let mut functions = None;
+        let mut tables = None;
+        let mut memories = None;
+        let mut globals = None;
+        let mut exports = None;
+        let mut start = None;
+        let mut elems = None;
+        let mut code = None;
+        let mut datas = None;
+
+        let mut last_section = 0;
+        while !buf.exhausted() {
+            let section_id = u8::decode(buf).map_err(|e| e.at(buf))?;
+            if section_id > 0 && section_id <= last_section {
+                return Err(ErrorKind::SectionOutOfOrder { prev: last_section, this: section_id }.at(buf));
+            }
+            let len = u32::decode(buf).map_err(|e| e.at(buf))?;
+            let section_bytes = buf.take(len as usize).ok_or(ErrorKind::TooShort).map_err(|e| e.at(buf))?;
+            let section_buf = Buf::with_consumed(section_bytes, buf.consumed());
+            match section_id {
+                0 => customs.push(section_buf),
+                1 => types = Some(section_buf),
+                2 => imports = Some(section_buf),
+                3 => functions = Some(section_buf),
+                4 => tables = Some(section_buf),
+                5 => memories = Some(section_buf),
+                6 => globals = Some(section_buf),
+                7 => exports = Some(section_buf),
+                8 => start = Some(section_buf),
+                9 => elems = Some(section_buf),
+                10 => code = Some(section_buf),
+                11 => datas = Some(section_buf),
+                _ => return Err(ErrorKind::InvalidSectionId(section_id).at(buf)),
+            }
+
+            last_section = section_id;
+        }
+
+        fn load_section<T: WasmDecode + Default>(buf: Option<Buf>) -> Result<T, Error> {
+            match buf {
+                Some(mut buf) => {
+                    let x = T::decode(&mut buf).map_err(|e| e.at(&buf))?;
+                    Ok(x)
+                },
+                None => Ok(T::default()),
+            }
+        }
+
+        let customs = customs.into_iter().map(|mut buf| CustomSection::decode(&mut buf)).collect::<Result<Vec<_>, _>>().map_err(|e| e.at(buf))?;
+        let types = load_section::<Vec<FuncType>>(types)?;
+        let imports = load_section::<Vec<Import>>(imports)?;
+        let tables = load_section::<Vec<TableType>>(tables)?;
+        let memories = load_section::<Vec<Limit>>(memories)?;
+        let globals = load_section::<Vec<Global>>(globals)?;
+        let exports = load_section::<Vec<Export>>(exports)?;
+        let start = start.map(|mut buf| u32::decode(&mut buf)).transpose().map_err(|e| e.at(buf))?;
+        let elems = load_section::<Vec<Element>>(elems)?;
+        let datas = load_section::<Vec<Data>>(datas)?;
+
+        let functions = match (functions, code) {
+            (None, None) => Vec::new(),
+            (None, Some(_)) => return Err(ErrorKind::FuncWithoutCode.at(buf)),
+            (Some(_), None) => return Err(ErrorKind::CodeWithoutFunc.at(buf)),
+            (Some(mut functions), Some(mut code)) => {
+                Function::decode(&mut functions, &mut code).map_err(|e| e.at(buf))?
+            },
+        };
+
+        let module = Self {
+            custom_sections: customs,
+            types,
+            imports,
+            functions,
+            tables,
+            memories,
+            globals,
+            exports,
+            start,
+            elems,
+            datas,
+        };
+
+        Ok(module)
     }
 }
 
@@ -176,95 +267,6 @@ impl WasmEncode for Module {
     }
 }
 
-impl WasmDecode for Module {
-    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
-        let header = <[u8; 8]>::decode(buf)?;
-        if header != HEADER {
-            return Err(ErrorKind::BadHeader(header));
-        }
-
-        let mut customs = Vec::new();
-        let mut types = None;
-        let mut imports = None;
-        let mut functions = None;
-        let mut tables = None;
-        let mut memories = None;
-        let mut globals = None;
-        let mut exports = None;
-        let mut start = None;
-        let mut elems = None;
-        let mut code = None;
-        let mut datas = None;
-
-        let mut last_section = 0;
-        while !buf.exhausted() {
-            let section_id = u8::decode(buf)?;
-            if section_id > 0 && section_id <= last_section {
-                return Err(ErrorKind::SectionOutOfOrder { prev: last_section, this: section_id });
-            }
-            let len = u32::decode(buf)?;
-            let section_bytes = buf.take(len as usize).ok_or(ErrorKind::TooShort)?;
-            let section_buf = Buf::with_consumed(section_bytes, buf.consumed());
-            match section_id {
-                0 => customs.push(section_buf),
-                1 => types = Some(section_buf),
-                2 => imports = Some(section_buf),
-                3 => functions = Some(section_buf),
-                4 => tables = Some(section_buf),
-                5 => memories = Some(section_buf),
-                6 => globals = Some(section_buf),
-                7 => exports = Some(section_buf),
-                8 => start = Some(section_buf),
-                9 => elems = Some(section_buf),
-                10 => code = Some(section_buf),
-                11 => datas = Some(section_buf),
-                _ => return Err(ErrorKind::InvalidSectionId(section_id)),
-            }
-
-            last_section = section_id;
-        }
-
-        fn load_section<T: WasmDecode + Default>(buf: Option<Buf>) -> Result<T, ErrorKind> {
-            Ok(buf.map(|mut buf| T::decode(&mut buf)).transpose()?.unwrap_or_default())
-        }
-
-        let customs = customs.into_iter().map(|mut buf| CustomSection::decode(&mut buf)).collect::<Result<Vec<_>, _>>()?;
-        let types = load_section::<Vec<FuncType>>(types)?;
-        let imports = load_section::<Vec<Import>>(imports)?;
-        let tables = load_section::<Vec<TableType>>(tables)?;
-        let memories = load_section::<Vec<Limit>>(memories)?;
-        let globals = load_section::<Vec<Global>>(globals)?;
-        let exports = load_section::<Vec<Export>>(exports)?;
-        let start = start.map(|mut buf| u32::decode(&mut buf)).transpose()?;
-        let elems = load_section::<Vec<Element>>(elems)?;
-        let datas = load_section::<Vec<Data>>(datas)?;
-
-        let functions = match (functions, code) {
-            (None, None) => Vec::new(),
-            (None, Some(_)) => return Err(ErrorKind::FuncWithoutCode),
-            (Some(_), None) => return Err(ErrorKind::CodeWithoutFunc),
-            (Some(mut functions), Some(mut code)) => {
-                Function::decode(&mut functions, &mut code)?
-            },
-        };
-
-        let module = Self {
-            custom_sections: customs,
-            types,
-            imports,
-            functions,
-            tables,
-            memories,
-            globals,
-            exports,
-            start,
-            elems,
-            datas,
-        };
-
-        Ok(module)
-    }
-}
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Limit {

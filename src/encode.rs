@@ -361,6 +361,15 @@ pub enum ErrorKind {
     InvalidInstruction(u8, Option<u32>),
 }
 
+impl ErrorKind {
+    pub(crate) fn at(self, at: &Buf<'_>) -> crate::Error {
+        crate::Error {
+            offset: at.error_location(),
+            error: self,
+        }
+    }
+}
+
 impl From<std::string::FromUtf8Error> for ErrorKind {
     fn from(value: std::string::FromUtf8Error) -> Self {
         Self::InvalidUtf8(value)
