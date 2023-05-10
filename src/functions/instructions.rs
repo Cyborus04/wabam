@@ -2462,8 +2462,8 @@ impl WasmDecode for Instruction {
             Extended(0xFD, 95) => F64x2PromoteLowF32x4,
             _ => {
                 let (x, y) = id.deconstruct();
-                return Err(crate::encode::ErrorKind::InvalidInstruction(x, y))
-            },
+                return Err(crate::encode::ErrorKind::InvalidInstruction(x, y));
+            }
         };
         Ok(instr)
     }
@@ -2479,7 +2479,7 @@ impl InstrId {
         match *self {
             InstrId::Single(x) => (x, None),
             InstrId::Extended(x, y) => (x, Some(y)),
-        }   
+        }
     }
 }
 

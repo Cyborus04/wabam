@@ -63,7 +63,6 @@ impl Function {
         for _ in 0..func_len {
             let type_idx = u32::decode(func_buf)?;
 
-
             let _code_size = u32::decode(code_buf)?;
 
             let mut locals = Vec::new();
@@ -76,7 +75,11 @@ impl Function {
 
             let body = Expr::decode(code_buf)?;
 
-            out.push(Function { type_idx, locals, body });
+            out.push(Function {
+                type_idx,
+                locals,
+                body,
+            });
         }
 
         Ok(out)

@@ -43,7 +43,8 @@ pub enum ElemKind {
 impl WasmDecode for ElemKind {
     fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, ErrorKind>
     where
-        Self: Sized {
+        Self: Sized,
+    {
         let d = u8::decode(buf)?;
         match d {
             0 => Ok(Self::FuncRef),
