@@ -1,5 +1,6 @@
 use crate::WasmEncode;
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct CustomSection {
     pub name: String,
     pub data: Vec<u8>,

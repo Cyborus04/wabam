@@ -3,6 +3,7 @@ use crate::{ValType, WasmEncode};
 mod instructions;
 pub use instructions::*;
 
+#[derive(PartialEq, Debug, Clone)]
 pub struct Function {
     pub type_idx: u32,
     pub locals: Vec<ValType>,
