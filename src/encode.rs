@@ -327,24 +327,39 @@ impl<'a> Buf<'a> {
     }
 }
 
+/// Errors that can happen when reading a wasm module.
 #[derive(Debug)]
 pub enum DecodeError {
+    /// The magic value of `\0asm\1\0\0\0` was not found at the start of the file.
     BadHeader([u8; 8]),
+    /// Section appeared after when it should.
     SectionOutOfOrder { prev: u8, this: u8 },
+    /// Unknown section (id > 11) was found.
     InvalidSectionId(u8),
+    /// There was a function section, but no code section
     FuncWithoutCode,
+    /// There was a code section, but no function section
     CodeWithoutFunc,
+    /// The lengths of the code and function sections are not the same
     FuncCodeMismatch {
         func_len: u32,
         code_len: u32,
     },
+    /// The file was too short
     TooShort,
+    /// A boolean with a value other than 0 or 1 was found
     BadBool,
+    /// A number was encoded with too many bytes
     NumTooLong,
+    /// Invalid UTF-8
     InvalidUtf8(std::string::FromUtf8Error),
+    /// Unknown type id
     InvalidType(u8),
+    /// Expected a certain byte but did not find it
     ExpectedByte { expected: u8, found: u8 },
+    /// Unknown variant found
     InvalidDiscriminant(u8),
+    /// Unknown instruction found
     InvalidInstruction(u8, Option<u32>),
 }
 

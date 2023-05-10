@@ -17,6 +17,7 @@ pub use val_types::*;
 
 pub use encode::DecodeError as ErrorKind;
 
+/// An error that occured when reading a module, and where.
 #[derive(Debug)]
 pub struct Error {
     offset: usize,
