@@ -1,5 +1,7 @@
-use crate::{RefType, Limit, WasmEncode, Expr};
-
+use crate::{
+    encode::{ErrorKind, WasmDecode},
+    Expr, Limit, RefType, WasmEncode,
+};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct TableType {
@@ -18,6 +20,14 @@ impl WasmEncode for TableType {
     }
 }
 
+impl WasmDecode for TableType {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, ErrorKind> {
+        let ref_type = RefType::decode(buf)?;
+        let limits = Limit::decode(buf)?;
+        Ok(Self { ref_type, limits })
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct Element {
     pub kind: ElemKind,
@@ -28,6 +38,19 @@ pub struct Element {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ElemKind {
     FuncRef,
+}
+
+impl WasmDecode for ElemKind {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, ErrorKind>
+    where
+        Self: Sized,
+    {
+        let d = u8::decode(buf)?;
+        match d {
+            0 => Ok(Self::FuncRef),
+            _ => Err(ErrorKind::InvalidType(d)),
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -234,5 +257,101 @@ impl WasmEncode for Element {
                 exprs.encode(v);
             }
         }
+    }
+}
+
+impl WasmDecode for Element {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, ErrorKind> {
+        use ElemInit::*;
+        use ElemMode::*;
+
+        let d = u8::decode(buf)?;
+        let elem = match d {
+            0 => {
+                let offset = Expr::decode(buf)?;
+                let indices = Vec::<u32>::decode(buf)?;
+                Element {
+                    kind: ElemKind::FuncRef,
+                    init: Indices(indices),
+                    mode: Active {
+                        table_idx: 0,
+                        offset,
+                    },
+                }
+            }
+            1 => {
+                let kind = ElemKind::decode(buf)?;
+                let indices = Vec::<u32>::decode(buf)?;
+                Element {
+                    kind,
+                    init: Indices(indices),
+                    mode: Passive,
+                }
+            }
+            2 => {
+                let table_idx = u32::decode(buf)?;
+                let offset = Expr::decode(buf)?;
+                let kind = ElemKind::decode(buf)?;
+                let indices = Vec::<u32>::decode(buf)?;
+                Element {
+                    kind,
+                    init: Indices(indices),
+                    mode: Active { table_idx, offset },
+                }
+            }
+            3 => {
+                let kind = ElemKind::decode(buf)?;
+                let exprs = Vec::<Expr>::decode(buf)?;
+                Element {
+                    kind,
+                    init: Expressions(exprs),
+                    mode: Passive,
+                }
+            }
+            4 => {
+                let offset = Expr::decode(buf)?;
+                let exprs = Vec::<Expr>::decode(buf)?;
+                Element {
+                    kind: ElemKind::FuncRef,
+                    init: Expressions(exprs),
+                    mode: Active {
+                        table_idx: 0,
+                        offset,
+                    },
+                }
+            }
+            5 => {
+                let kind = ElemKind::decode(buf)?;
+                let exprs = Vec::<Expr>::decode(buf)?;
+                Element {
+                    kind,
+                    init: Expressions(exprs),
+                    mode: Passive,
+                }
+            }
+            6 => {
+                let table_idx = u32::decode(buf)?;
+                let offset = Expr::decode(buf)?;
+                let kind = ElemKind::decode(buf)?;
+                let exprs = Vec::<Expr>::decode(buf)?;
+                Element {
+                    kind,
+                    init: Expressions(exprs),
+                    mode: Active { table_idx, offset },
+                }
+            }
+            7 => {
+                let kind = ElemKind::decode(buf)?;
+                let exprs = Vec::<Expr>::decode(buf)?;
+                Element {
+                    kind,
+                    init: Expressions(exprs),
+                    mode: Passive,
+                }
+            }
+            _ => return Err(ErrorKind::InvalidDiscriminant(d)),
+        };
+
+        Ok(elem)
     }
 }

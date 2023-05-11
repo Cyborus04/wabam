@@ -1,4 +1,7 @@
-use crate::WasmEncode;
+use crate::{
+    encode::{Buf, ErrorKind, WasmDecode},
+    WasmEncode,
+};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct CustomSection {
@@ -17,6 +20,13 @@ impl WasmEncode for CustomSection {
     }
 }
 
+impl WasmDecode for CustomSection {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let name = String::decode(buf)?;
+        let data = buf.take_rest().to_vec();
+        Ok(Self { name, data })
+    }
+}
 
 pub struct NameSection {
     pub module_name: Option<String>,
@@ -28,7 +38,10 @@ impl NameSection {
     pub fn to_custom(&self) -> CustomSection {
         let mut data = Vec::with_capacity(self.size());
         self.encode(&mut data);
-        CustomSection { name: "name".into(), data }
+        CustomSection {
+            name: "name".into(),
+            data,
+        }
     }
 }
 

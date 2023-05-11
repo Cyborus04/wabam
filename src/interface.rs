@@ -1,4 +1,8 @@
-use crate::{encode::WasmEncode, tables::TableType, Limit, GlobalType};
+use crate::{
+    encode::{WasmDecode, WasmEncode},
+    tables::TableType,
+    GlobalType, Limit,
+};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Import {
@@ -16,6 +20,15 @@ impl WasmEncode for Import {
         self.module.encode(v);
         self.name.encode(v);
         self.desc.encode(v);
+    }
+}
+
+impl WasmDecode for Import {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
+        let module = String::decode(buf)?;
+        let name = String::decode(buf)?;
+        let desc = ImportDesc::decode(buf)?;
+        Ok(Self { module, name, desc })
     }
 }
 
@@ -61,6 +74,27 @@ impl WasmEncode for ImportDesc {
     }
 }
 
+impl WasmDecode for ImportDesc {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
+        let d = u8::decode(buf)?;
+        match d {
+            0 => Ok(Self::Func {
+                type_idx: u32::decode(buf)?,
+            }),
+            1 => Ok(Self::Table {
+                table_type: TableType::decode(buf)?,
+            }),
+            2 => Ok(Self::Memory {
+                mem_type: Limit::decode(buf)?,
+            }),
+            3 => Ok(Self::Global {
+                global_type: GlobalType::decode(buf)?,
+            }),
+            _ => Err(crate::encode::ErrorKind::InvalidDiscriminant(d)),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Export {
     pub name: String,
@@ -75,6 +109,14 @@ impl WasmEncode for Export {
     fn encode(&self, v: &mut Vec<u8>) {
         self.name.encode(v);
         self.desc.encode(v);
+    }
+}
+
+impl WasmDecode for Export {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
+        let name = String::decode(buf)?;
+        let desc = ExportDesc::decode(buf)?;
+        Ok(Self { name, desc })
     }
 }
 
@@ -114,6 +156,27 @@ impl WasmEncode for ExportDesc {
                 v.push(3);
                 global_idx.encode(v);
             }
+        }
+    }
+}
+
+impl WasmDecode for ExportDesc {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::encode::ErrorKind> {
+        let d = u8::decode(buf)?;
+        match d {
+            0 => Ok(Self::Func {
+                func_idx: u32::decode(buf)?,
+            }),
+            1 => Ok(Self::Table {
+                table_idx: u32::decode(buf)?,
+            }),
+            2 => Ok(Self::Memory {
+                mem_idx: u32::decode(buf)?,
+            }),
+            3 => Ok(Self::Global {
+                global_idx: u32::decode(buf)?,
+            }),
+            _ => Err(crate::encode::ErrorKind::InvalidDiscriminant(d)),
         }
     }
 }

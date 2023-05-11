@@ -1,3 +1,4 @@
+use std::mem::MaybeUninit;
 
 pub(crate) trait WasmEncode {
     fn size(&self) -> usize;
@@ -261,5 +262,281 @@ impl WasmEncode for f64 {
 
     fn encode(&self, v: &mut Vec<u8>) {
         v.extend(self.to_le_bytes())
+    }
+}
+
+pub(crate) struct Buf<'a> {
+    buf: &'a [u8],
+    consumed: usize,
+    prev_consumed: usize,
+}
+
+impl<'a> Buf<'a> {
+    pub fn new(buf: &'a [u8]) -> Self {
+        Self {
+            buf,
+            consumed: 0,
+            prev_consumed: 0,
+        }
+    }
+
+    pub fn with_consumed(buf: &'a [u8], consumed: usize) -> Self {
+        Self {
+            buf,
+            consumed,
+            prev_consumed: consumed,
+        }
+    }
+
+    pub fn take(&mut self, n: usize) -> Option<&'a [u8]> {
+        if n > self.buf.len() {
+            return None;
+        }
+        let (ret, new_self) = self.buf.split_at(n);
+        self.buf = new_self;
+        self.prev_consumed = self.consumed;
+        self.consumed += ret.len();
+        Some(ret)
+    }
+
+    pub fn take_one(&mut self) -> Option<u8> {
+        let (ret, new_self) = self.buf.split_first()?;
+        self.buf = new_self;
+        self.prev_consumed = self.consumed;
+        self.consumed += 1;
+        Some(*ret)
+    }
+
+    pub fn take_rest(&mut self) -> &[u8] {
+        let x = std::mem::take(&mut self.buf);
+        self.prev_consumed = self.consumed;
+        self.consumed += x.len();
+        x
+    }
+
+    pub fn consumed(&self) -> usize {
+        self.consumed
+    }
+
+    pub fn error_location(&self) -> usize {
+        self.prev_consumed
+    }
+
+    pub fn exhausted(&self) -> bool {
+        self.buf.is_empty()
+    }
+}
+
+/// Errors that can happen when reading a wasm module.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ErrorKind {
+    /// The magic value of `\0asm\1\0\0\0` was not found at the start of the file.
+    BadHeader([u8; 8]),
+    /// Section appeared after when it should.
+    SectionOutOfOrder { prev: u8, this: u8 },
+    /// Unknown section (id > 11) was found.
+    InvalidSectionId(u8),
+    /// There was a function section, but no code section
+    FuncWithoutCode,
+    /// There was a code section, but no function section
+    CodeWithoutFunc,
+    /// The lengths of the code and function sections are not the same
+    FuncCodeMismatch { func_len: u32, code_len: u32 },
+    /// The file was too short
+    TooShort,
+    /// A boolean with a value other than 0 or 1 was found
+    BadBool,
+    /// A number was encoded with too many bytes
+    NumTooLong,
+    /// Invalid UTF-8
+    InvalidUtf8(std::string::FromUtf8Error),
+    /// Unknown type id
+    InvalidType(u8),
+    /// Unknown variant found
+    InvalidDiscriminant(u8),
+    /// Unknown instruction found
+    InvalidInstruction(u8, Option<u32>),
+}
+
+impl ErrorKind {
+    pub(crate) fn at(self, at: &Buf<'_>) -> crate::Error {
+        crate::Error {
+            offset: at.error_location(),
+            error: self,
+        }
+    }
+}
+
+impl std::fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            ErrorKind::BadHeader(found) => write!(f, "expected magic number \"\\0asm\", found {:?}", found),
+            ErrorKind::SectionOutOfOrder { prev, this } => write!(f, "section {} found after section {}", this, prev),
+            ErrorKind::InvalidSectionId(id) => write!(f, "found section with id {}", id),
+            ErrorKind::FuncWithoutCode => write!(f, "function section was found but code section was not"),
+            ErrorKind::CodeWithoutFunc => write!(f, "code section was found but function section was not"),
+            ErrorKind::FuncCodeMismatch { func_len, code_len } => write!(f, "function section length ({}b) is not equal to code section length ({}b)", func_len, code_len),
+            ErrorKind::TooShort => write!(f, "file ended before was expected"),
+            ErrorKind::BadBool => write!(f, "bool was not 0 or 1"),
+            ErrorKind::NumTooLong => write!(f, "number took too many bytes"),
+            ErrorKind::InvalidUtf8(ref e) => e.fmt(f),
+            ErrorKind::InvalidType(t) => write!(f, "type id {:#02X} is not valid", t),
+            ErrorKind::InvalidDiscriminant(d) => write!(f, "variant discriminant {:#02X} is not valid", d),
+            ErrorKind::InvalidInstruction(x, y) => {
+                match y {
+                    Some(y) => write!(f, "{x:#02X}-{y:08X} is not a valid instruction"),
+                    None => write!(f, "{x:#02X} is not a valid instruction"),
+                }
+            },
+        }
+    }
+}
+
+impl std::error::Error for ErrorKind {}
+
+impl From<std::string::FromUtf8Error> for ErrorKind {
+    fn from(value: std::string::FromUtf8Error) -> Self {
+        Self::InvalidUtf8(value)
+    }
+}
+
+pub(crate) trait WasmDecode {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind>
+    where
+        Self: Sized;
+}
+
+impl<T: WasmDecode, const N: usize> WasmDecode for [T; N] {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let mut out: MaybeUninit<[T; N]> = MaybeUninit::uninit();
+        let ptr = out.as_mut_ptr().cast::<T>();
+
+        for i in 0..N {
+            let x = T::decode(buf);
+            match x {
+                Ok(x) => unsafe { ptr.add(i).write(x) },
+                Err(e) => {
+                    // Drop all previously decoded elements
+                    let init = std::ptr::slice_from_raw_parts_mut(ptr, i);
+                    unsafe { std::ptr::drop_in_place(init) };
+
+                    return Err(e);
+                }
+            }
+        }
+
+        Ok(unsafe { out.assume_init() })
+    }
+}
+
+impl WasmDecode for u8 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        buf.take_one().ok_or(ErrorKind::TooShort)
+    }
+}
+
+impl WasmDecode for bool {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        match u8::decode(buf)? {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(ErrorKind::BadBool),
+        }
+    }
+}
+
+impl WasmDecode for u32 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let mut out = 0;
+        for i in 0..5 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u32) << (i * 7);
+            if b & 0x80 == 0 {
+                return Ok(out);
+            }
+        }
+        Err(ErrorKind::NumTooLong)
+    }
+}
+
+impl WasmDecode for i32 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let mut out = 0;
+        for i in 0..5 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u32).wrapping_shl(i * 7);
+            if b & 0x80 == 0 {
+                let x = if b & 0x40 == 0 {
+                    out
+                } else {
+                    out | (u32::MAX.wrapping_shl(i * 7))
+                };
+                return Ok(x as i32);
+            }
+        }
+        Err(ErrorKind::NumTooLong)
+    }
+}
+
+impl WasmDecode for u64 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let mut out = 0;
+        for i in 0..10 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u64) << (i * 7);
+            if b & 0x80 == 0 {
+                return Ok(out);
+            }
+        }
+        Err(ErrorKind::NumTooLong)
+    }
+}
+
+impl WasmDecode for i64 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let mut out = 0;
+        for i in 0..10 {
+            let b = u8::decode(buf)?;
+            out |= ((b & 0x7F) as u64).wrapping_shl(i * 7);
+            if b & 0x80 == 0 {
+                let x = if b & 0x40 == 0 {
+                    out
+                } else {
+                    out | (u64::MAX.wrapping_shl(i * 7))
+                };
+                return Ok(x as i64);
+            }
+        }
+        Err(ErrorKind::NumTooLong)
+    }
+}
+
+impl WasmDecode for f32 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        Ok(f32::from_le_bytes(<[u8; 4]>::decode(buf)?))
+    }
+}
+
+impl WasmDecode for f64 {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        Ok(f64::from_le_bytes(<[u8; 8]>::decode(buf)?))
+    }
+}
+
+impl<T: WasmDecode> WasmDecode for Vec<T> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let len = u32::decode(buf)? as usize;
+        let mut v = Vec::with_capacity(len);
+        for _ in 0..len {
+            v.push(T::decode(buf)?);
+        }
+        Ok(v)
+    }
+}
+
+impl WasmDecode for String {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let s = String::from_utf8(Vec::<u8>::decode(buf)?)?;
+        Ok(s)
     }
 }
