@@ -46,7 +46,7 @@ macro_rules! instr_impl {
     };
 
     (return) => { $crate::I::Return };
-    (call $x:tt) => { $crate::I::Call { func_idx: $crate::ml!($x) } };
+    (call $x:tt) => { $crate::I::Call($crate::ml!($x)) };
     (call_indirect $type:tt $table:tt) => { $crate::I::CallIndirect { type_idx: $crate::ml!($type), table_idx: $crate::ml!($table) } };
 
     (drop) => { $crate::I::Drop };
