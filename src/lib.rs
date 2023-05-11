@@ -392,7 +392,7 @@ impl WasmEncode for Data {
                 mem_index,
                 offset,
                 data,
-            } if *mem_index == 0 => {
+            } if *mem_index != 0 => {
                 v.push(2);
                 mem_index.encode(v);
                 offset.encode(v);
