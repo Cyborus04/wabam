@@ -375,7 +375,7 @@ impl WasmEncode for Data {
                 mem_index,
                 offset,
                 data,
-            } if *mem_index == 0 => mem_index.size() + offset.size() + data.size(),
+            } if *mem_index != 0 => mem_index.size() + offset.size() + data.size(),
             Active {
                 mem_index: _,
                 offset,
