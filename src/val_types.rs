@@ -1,5 +1,20 @@
 use crate::encode::{Buf, ErrorKind, WasmDecode, WasmEncode};
 
+
+/// The type of a value in a function signature, global or local variable, or 
+/// the stack.
+/// 
+/// The corresponding types in Rust are as follows: 
+/// 
+/// | WebAssembly | Rust | Description
+/// |-|-|-|
+/// |`i32`| `i32` and `u32` | 32 bits, without a sign. |
+/// |`i64`| `i64` and `u64` | 64 bits, without a sign. |
+/// |`f32`| `f32` | IEEE float. |
+/// |`f64`| `f64` | IEEE double. |
+/// |`funcref`| `fn(*) -> *` | Function handle. |
+/// |`externref`| No equivalent | Arbitrary external resource. |
+/// |`v128` | `std::arch::wasm32::v128` | 128-bit SIMD vector. |
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ValType {
     Num(NumType),
@@ -8,16 +23,23 @@ pub enum ValType {
 }
 
 impl ValType {
+    /// wasm's `i32` type.
     pub const I32: ValType = Self::Num(NumType::I32);
+    /// wasm's `i64` type.
     pub const I64: ValType = Self::Num(NumType::I64);
+    /// wasm's `f32` type.
     pub const F32: ValType = Self::Num(NumType::F32);
+    /// wasm's `f64` type.
     pub const F64: ValType = Self::Num(NumType::F64);
 
+    /// wasm's `funcref` type.
     #[allow(non_upper_case_globals)]
     pub const FuncRef: ValType = Self::Ref(RefType::FuncRef);
+    /// wasm's `externref` type.
     #[allow(non_upper_case_globals)]
     pub const ExternRef: ValType = Self::Ref(RefType::ExternRef);
 
+    /// wasm's `v128` type.
     pub const V128: ValType = Self::Vec(VecType::V128);
 
     pub fn type_id(self) -> u8 {
@@ -98,9 +120,14 @@ impl Ord for ValType {
     }
 }
 
+/// The type of a reference value.
+/// 
+/// See [`ValType`] for more info.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RefType {
+    /// wasm's `funcref` type.
     FuncRef,
+    /// wasm's `externref` type.
     ExternRef,
 }
 
@@ -133,11 +160,18 @@ impl WasmDecode for RefType {
     }
 }
 
+/// The type of a numeric value.
+/// 
+/// See [`ValType`] for more info.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NumType {
+    /// wasm's `i32` type.
     I32,
+    /// wasm's `i64` type.
     I64,
+    /// wasm's `f32` type.
     F32,
+    /// wasm's `f64` type.
     F64,
 }
 
@@ -165,8 +199,12 @@ impl NumType {
     }
 }
 
+/// The type of a SIMD vector value.
+/// 
+/// See [`ValType`] for more info.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VecType {
+    /// wasm's `v128` type.
     V128,
 }
 

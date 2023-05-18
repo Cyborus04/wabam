@@ -1,8 +1,11 @@
+//! A table is a list of reference values.
+
 use crate::{
     encode::{ErrorKind, WasmDecode},
     Expr, Limit, RefType, WasmEncode,
 };
 
+/// The table's size limits and what reference type it may hold
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct TableType {
     pub ref_type: RefType,
@@ -28,6 +31,17 @@ impl WasmDecode for TableType {
     }
 }
 
+/// A series of references to be loaded into a table.
+/// 
+/// All tables are filled with null references at first. Element segments are 
+/// used to initialize them, like how [`Data`](crate::Data)s initialize linear memory.
+/// 
+/// Active element segments are loaded at instantiation-time, while passive 
+/// segments are loaded at run-time using the [`table.init`](crate::functions::Instruction::TableInit) instruction.
+/// 
+/// Declarative segments are special, they are not loaded into a table. Instead,
+/// they are used to pre-declare what references can be formed with the 
+/// [`ref.func`](crate::functions::Instruction::RefFunc) instruction.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Element {
     pub kind: ElemKind,
@@ -35,8 +49,11 @@ pub struct Element {
     pub mode: ElemMode,
 }
 
+/// The type of reference in this element segment
+// sad that elements can't use actual reference types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ElemKind {
+    /// `funcref`, see [`RefType`]
     FuncRef,
 }
 
@@ -53,16 +70,24 @@ impl WasmDecode for ElemKind {
     }
 }
 
+/// The values in the segment
 #[derive(PartialEq, Debug, Clone)]
 pub enum ElemInit {
+    /// References to functions, via their indicees
     Indices(Vec<u32>),
+    /// Expressions that return reference values
     Expressions(Vec<Expr>),
 }
 
+/// In what way the segment should be loaded
 #[derive(PartialEq, Debug, Clone)]
 pub enum ElemMode {
+    /// Load at instantiation
     Active { table_idx: u32, offset: Expr },
+    /// Load at runtime, with [`table.init`](crate::functions::Instruction::TableInit)
     Passive,
+    /// Don't load, but declare what references can be made with 
+    /// [`ref.func`](crate::functions::Instruction::RefFunc)
     Declarative,
 }
 

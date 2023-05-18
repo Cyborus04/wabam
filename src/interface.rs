@@ -1,9 +1,14 @@
+//! [`Import`]s and [`Export`]s are how modules interface with the outside world.
+
 use crate::{
     encode::{WasmDecode, WasmEncode},
     tables::TableType,
     GlobalType, Limit,
 };
 
+/// A function, table, memory, or global requested from the host environment.
+/// 
+/// They are required to be supplied for instantiation to succeed.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Import {
     pub module: String,
@@ -32,6 +37,12 @@ impl WasmDecode for Import {
     }
 }
 
+/// The signature of an import
+/// 
+/// - A function's type signature index.
+/// - A table's type.
+/// - A memory's size.
+/// - A global's type.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum ImportDesc {
     Func { type_idx: u32 },
@@ -95,6 +106,9 @@ impl WasmDecode for ImportDesc {
     }
 }
 
+/// A module's internal resource that is exported to the host environment.
+/// 
+/// The name must be unique within the module.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Export {
     pub name: String,
@@ -120,6 +134,7 @@ impl WasmDecode for Export {
     }
 }
 
+/// The index of an exported resource
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum ExportDesc {
     Func { func_idx: u32 },

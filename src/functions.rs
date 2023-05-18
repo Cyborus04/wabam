@@ -1,3 +1,5 @@
+//! The main star of a module, code!
+
 use crate::{
     encode::{Buf, ErrorKind, WasmDecode},
     ValType, WasmEncode,
@@ -6,6 +8,8 @@ use crate::{
 mod instructions;
 pub use instructions::*;
 
+/// A callable or exportable expression with local variables.
+// Yeah, you try describing what a function is!
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
     pub type_idx: u32,
@@ -97,6 +101,7 @@ fn compress_locals(locals: &[ValType]) -> Vec<(u32, ValType)> {
     locals_compressed
 }
 
+/// A function signature, mapping inputs types to output types.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct FuncType {
     pub inputs: Vec<ValType>,
@@ -134,6 +139,7 @@ impl WasmDecode for FuncType {
     }
 }
 
+/// A macro to define a [`FuncType`].
 #[macro_export]
 macro_rules! func_type {
     () => {

@@ -801,7 +801,7 @@ macro_rules! mlt {
     };
 }
 
-/// A macro for creating arrays of [`Instruction`](crate::functions::Instructions)s
+/// A macro for creating arrays of [`Instruction`](crate::functions::Instruction)s
 /// with wat-like syntax
 ///
 /// Values can be interpolated with `{ /* ... */ }` in place of an instruction's

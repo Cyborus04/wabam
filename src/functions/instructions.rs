@@ -2,6 +2,10 @@ use crate::{encode::WasmDecode, RefType, ValType, WasmEncode};
 
 mod instr_macro;
 
+/// An series of [`Instruction`]s.
+/// 
+/// `Expr`s are used in function bodies, element and data segment offsets, and 
+/// global variable values.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
     pub instructions: Vec<Instruction>,
@@ -58,874 +62,2525 @@ impl From<Instruction> for Expr {
     }
 }
 
+/// The core of it all, a single instruction.
+/// 
+/// Each variant has its own documentation.
+/// 
+/// It is recommended to create these with the [`instr`](crate::instr) or 
+/// [`instrs`](crate::instrs) macros.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     // Control Instructions
-    /// `unreachable`
+    /// `unreachable`. Signature: `() -> trap`
+    /// 
+    /// Immediately traps.
+    #[doc(alias("unreachable"))]
     Unreachable,
-    /// `nop`
+    /// `nop`. Signature: `() -> ()`
+    /// 
+    /// Does nothing
+    #[doc(alias("nop"))]
     NoOp,
-    /// `block`
+    /// `block`. Signature: `() -> ()`
+    /// 
+    /// Enters a new block. Branching instructions skip to the end of the block.
+    #[doc(alias("block"))]
     Block(Option<ValType>),
-    /// `loop`
+    /// `loop`. Signature: `() -> ()`
+    /// 
+    /// Enters a new looping block. Branching instructions return to the start
+    /// of the loop, reaching `end` exits the loop
+    #[doc(alias("loop"))]
     Loop(Option<ValType>),
-    /// `if`
+    /// `if`. Signature: `(cond: i32) -> ()`
+    /// 
+    /// - If `cond` is zero, skip to the corresponding `Else` instruction if 
+    /// there is one, or the end of the block if not.
+    /// - If `cond` is non-zero, continue executing. Jump to the end of the 
+    /// block once the corresponding `Else` instruction is reached
+    #[doc(alias("if"))]
     If(Option<ValType>),
-    /// `else`
+    /// `else`. Signature: `() -> ()`
+    /// 
+    /// See [`If`](Instruction::If)
+    #[doc(alias("else"))]
     Else,
-    /// `end`
+    /// `end`. Signature: `(block signature..) -> (block signature..)`
+    /// 
+    /// The end of the block. This always exits the block, no matter if it was a
+    /// loop or not
+    #[doc(alias("end"))]
     End,
-    /// `br`
+    /// `br`. Signature: `(block signature..) -> branch`
+    /// 
+    /// If this is at the end of the expression, it exits the expression. 
+    /// Otherwise, it jumps to the continuation of the block at the specified 
+    /// depth. For most blocks, that is the corresponding `end` instruction. For 
+    /// loops, that is the start of the loop.
+    #[doc(alias("br"))]
     Branch(u32),
-    /// `br_if`
+    /// `br_if`. Signature: `(cond: i32) -> ()`
+    /// 
+    /// If `cond` is non-zero, this executes the `br` instruction. Otherwise, 
+    /// it continues normally.
+    #[doc(alias("br_if"))]
     BranchIf(u32),
-    /// `br_table`
+    /// `br_table`. Signature: `(idx: i32) -> ()`
+    /// 
+    /// Executes the `br` at depth `depths[idx]`. If `idx` is out of bounds, 
+    /// uses the failsafe depth instead.
+    #[doc(alias("br_table"))]
     BranchTable {
         depths: Vec<u32>,
         failsafe: u32,
     },
-    /// `return`
+    /// `return`. Signature: `(expr signature..) -> exits`
+    /// 
+    /// Returns from the current expression.
+    #[doc(alias("return"))]
     Return,
-    /// `call`
+    /// `call`. Signature is that of the called function.
+    /// 
+    /// Calls the function at the given index. Imported functions start at 0,
+    /// functions defined in the module start after that.
+    #[doc(alias("call"))]
     Call(u32),
-    /// `call_indirect`
+    /// `call_indirect`. Signature: `(offset: i32, types[type_idx] inputs..) -> (types[type_idx] outputs..)`
+    /// 
+    /// Calls the function reference stored in `table_idx`-th table, at the 
+    /// index of the top of the stack
+    #[doc(alias("call_indirect"))]
     CallIndirect {
         type_idx: u32,
         table_idx: u32,
     },
 
     // Reference Instructions
-    /// `ref.null`
+    /// `ref.null`. Signature: `() -> (ref)`
+    /// 
+    /// Pushes a null reference of the given type to the stack.
+    #[doc(alias("ref.null"))]
     RefNull(RefType),
-    /// `ref.is_null`
+    /// `ref.is_null`. Signature: `(val: reftype) -> (i32)`
+    /// 
+    /// Checks `val` is null. If it is, pushs 1. If not, pushs 0.
+    #[doc(alias("ref.is_null"))]
     RefIsNull,
-    /// `ref.func`
+    /// `ref.func`. Signature: `() -> (funcref)`
+    /// 
+    /// Creates a reference to the given function, if it has been allowed by
+    /// declarative data segments.
+    #[doc(alias("ref.func"))]
     RefFunc(u32),
 
     // Parametric Instructions
-    /// `drop`
+    /// `drop`. Signature: `(x: valtype) -> ()`
+    /// 
+    /// Gets rid of `x`.
+    #[doc(alias("drop"))]
     Drop,
-    /// `select`
+    /// `select`. Signature: `(cond: i32, a: numtype, b: numtype) -> (numtype)`
+    /// 
+    /// If `cond` is 0, returns `b`. Otherwise, returns `a`.
+    #[doc(alias("select"))]
     Select,
 
     // Variable Instructions
-    /// `local.get`
+    /// `local.get`. Signature: `() -> (valtype)`
+    /// 
+    /// Returns the value in the local variable.
+    #[doc(alias("local.get"))]
     LocalGet(u32),
-    /// `local.set`
+    /// `local.set`. Signature: `(x: valtype) -> ()`
+    /// 
+    /// Sets the value of the local variable to `x`. The type of `x` must match
+    /// the type of the local.
+    #[doc(alias("local.set"))]
     LocalSet(u32),
-    /// `local.tee`
+    /// `local.tee`. Signature: `(x: valtype) -> (valtype)`
+    /// 
+    /// Like `local.set`, but returns `x` back.
+    #[doc(alias("local.tee"))]
     LocalTee(u32),
-    /// `global.get`
+    /// `global.get`. Signature: `() -> (valtype)`
+    /// 
+    /// Returns the value in the global variable.
+    #[doc(alias("global.get"))]
     GlobalGet(u32),
-    /// `global.set`
+    /// `global.set`. Signature: `(valtype) -> ()`
+    /// 
+    /// Sets the value of the global variable to `x`. The type of `x` must match
+    /// the type of the global.
+    #[doc(alias("global.set"))]
     GlobalSet(u32),
 
     // Table Instructions
-    /// `table.get`
+    /// `table.get`. Signature: `(idx: i32) -> (reftype)`
+    /// 
+    /// Returns the value at the `idx`-th position in the table.
+    #[doc(alias("table.get"))]
     TableGet(u32),
-    /// `table.set`
+    /// `table.set`. Signature: `(val: reftype, idx: i32) -> ()`
+    /// 
+    /// Set the value at the `idx`-th position in the table to `val`.
+    #[doc(alias("table.set"))]
     TableSet(u32),
-    /// `table.size`
+    /// `table.size`. Signature: `() -> (i32)`
+    /// 
+    /// Returns the size of the table.
+    #[doc(alias("table.size"))]
     TableSize(u32),
-    /// `table.grow`
+    /// `table.grow`. Signature: `(count: i32) -> ()`
+    /// 
+    /// Grows the given table by `count` values, filled with `ref.null`.
+    #[doc(alias("table.grow"))]
     TableGrow(u32),
-    /// `table.fill`
+    /// `table.fill`. Signature: `(count: i32, val: reftype, offset: i32) -> ()`
+    /// 
+    /// Fills `offset..offset + count` of the table with `val`.
+    #[doc(alias("table.fill"))]
     TableFill(u32),
-    /// `table.copy`
+    /// `table.copy`. Signature: `(count: i32, source: i32, destination: i32) -> ()`
+    /// 
+    /// Copies `source..source + count` from table A to 
+    /// `destination..destination + count` of table B.
+    #[doc(alias("table.copy"))]
     TableCopy {
+        /// The index of table B
         dest_index: u32,
+        /// The index of table A
         src_index: u32,
     },
-    /// `table.init`
+    /// `table.init`. Signature: `(count: i32, source: i32, destination: i32) -> ()`
+    /// 
+    /// Copies `source..source + count` from the element segment to 
+    /// `destination..destination + count` of the table.
+    #[doc(alias("table.init"))]
     TableInit {
         table_index: u32,
         elem_index: u32,
     },
-    /// `elem.drop`
+    /// `elem.drop`. Signature: `() -> ()`
+    /// 
+    /// Gets rid of the given element segment.
+    #[doc(alias("elem.drop"))]
     ElemDrop(u32),
 
     // Memory Instructions
-    /// `i32.load`
+    /// `i32.load`. Signature: `(ptr: i32) -> (i32)`
+    /// 
+    /// Loads an `i32` from linear memory at `ptr + offset`.
+    #[doc(alias("i32.load"))]
     I32Load {
         align: u32,
         offset: u32,
     },
-    /// `i64.load`
+    /// `i64.load`. Signature: `(ptr: i32) -> (i64)`
+    /// 
+    /// Loads an `i64` from linear memory at `ptr + offset`.
+    #[doc(alias("i64.load"))]
     I64Load {
         align: u32,
         offset: u32,
     },
-    /// `f32.load`
+    /// `f32.load`. Signature: `(ptr: i32) -> (f32)`
+    /// 
+    /// Loads an `f32` from linear memory at `ptr + offset`.
+    #[doc(alias("f32.load"))]
     F32Load {
         align: u32,
         offset: u32,
     },
-    /// `f64.load`
+    /// `f64.load`. Signature: `(ptr: i32) -> (f64)`
+    /// 
+    /// Loads an `f64` from linear memory at `ptr + offset`.
+    #[doc(alias("f64.load"))]
     F64Load {
         align: u32,
         offset: u32,
     },
 
-    /// `i32.load8_s`
+    /// `i32.load8_s`. Signature: `(ptr: i32) -> (i32)`
+    /// 
+    /// Loads a `u8` from linear memory at `ptr + offset` and sign extends it to 
+    /// 32 bits.
+    #[doc(alias("i32.load8_s"))]
     I32LoadS8 {
         align: u32,
         offset: u32,
     },
-    /// `i32.load8_u`
+    /// `i32.load8_u`. Signature: `(ptr: i32) -> (i32)`
+    /// 
+    /// Loads a `u8` from linear memory at `ptr + offset` and extends it to 32 bits.
+    #[doc(alias("i32.load8_u"))]
     I32LoadU8 {
         align: u32,
         offset: u32,
     },
-    /// `i32.load16_s`
+    /// `i32.load16_s`. Signature: `(ptr: i32) -> (i32)`
+    /// 
+    /// Loads a `u16` from linear memory at `ptr + offset` and sign extends it 
+    /// to 32 bits.
+    #[doc(alias("i32.load16_s"))]
     I32LoadS16 {
         align: u32,
         offset: u32,
     },
-    /// `i32.load16_u`
+    /// `i32.load16_u`. Signature: `(ptr: i32) -> (i32)`
+    /// 
+    /// Loads a `u16` from linear memory at `ptr + offset` and extends it to 32 bits.
+    #[doc(alias("i32.load16_u"))]
     I32LoadU16 {
         align: u32,
         offset: u32,
     },
 
-    /// `i64.load8_s`
+    /// `i64.load8_s`. Signature: `(i32) -> (i64)`
+    /// 
+    /// Loads a `u8` from linear memory at `ptr + offset` and sign extends it to 
+    /// 64 bits.
+    #[doc(alias("i64.load8_s"))]
     I64LoadS8 {
         align: u32,
         offset: u32,
     },
-    /// `i64.load8_u`
+    /// `i64.load8_u`. Signature: `(i32) -> (i64)`
+    /// 
+    /// Loads a `u8` from linear memory at `ptr + offset` and extends it to 64 bits.
+    #[doc(alias("i64.load8_u"))]
     I64LoadU8 {
         align: u32,
         offset: u32,
     },
-    /// `i64.load16_s`
+    /// `i64.load16_s`. Signature: `(i32) -> (i64)`
+    /// 
+    /// Loads a `u16` from linear memory at `ptr + offset` and sign extends it 
+    /// to 64 bits.
+    #[doc(alias("i64.load16_s"))]
     I64LoadS16 {
         align: u32,
         offset: u32,
     },
-    /// `i64.load16_u`
+    /// `i64.load16_u`. Signature: `(i32) -> (i64)`
+    /// 
+    /// Loads a `u16` from linear memory at `ptr + offset` and extends it to 64 bits.
+    #[doc(alias("i64.load16_u"))]
     I64LoadU16 {
         align: u32,
         offset: u32,
     },
-    /// `i64.load32_s`
+    /// `i64.load32_s`. Signature: `(i32) -> (i64)`
+    /// 
+    /// Loads a `u32` from linear memory at `ptr + offset` and sign extends it 
+    /// to 64 bits.
+    #[doc(alias("i64.load32_s"))]
     I64LoadS32 {
         align: u32,
         offset: u32,
     },
-    /// `i64.load32_u`
+    /// `i64.load32_u`. Signature: `(i32) -> (i64)`
+    /// 
+    /// Loads a `u32` from linear memory at `ptr + offset` and extends it to 64 bits.
+    #[doc(alias("i64.load32_u"))]
     I64LoadU32 {
         align: u32,
         offset: u32,
     },
 
-    /// `i32.store`
+    /// `i32.store`. Signature: `(val: i32, ptr: i32) -> ()`
+    /// 
+    /// Writes `val` to linear memory at `ptr + offset`.
+    #[doc(alias("i32.store"))]
     I32Store {
         align: u32,
         offset: u32,
     },
-    /// `i64.store`
+    /// `i64.store`. Signature: `(val: i64, ptr: i32) -> ()`
+    /// 
+    /// Writes `val` to linear memory at `ptr + offset`.
+    #[doc(alias("i64.store"))]
     I64Store {
         align: u32,
         offset: u32,
     },
-    /// `f32.store`
+    /// `f32.store`. Signature: `(val: f32, ptr: i32) -> ()`
+    /// 
+    /// Writes `val` to linear memory at `ptr + offset`.
+    #[doc(alias("f32.store"))]
     F32Store {
         align: u32,
         offset: u32,
     },
-    /// `f64.store`
+    /// `f64.store`. Signature: `(val: f64, ptr: i32) -> ()`
+    /// 
+    /// Writes `val` to linear memory at `ptr + offset`.
+    #[doc(alias("f64.store"))]
     F64Store {
         align: u32,
         offset: u32,
     },
 
-    /// `i32.store8`
+    /// `i32.store8`. Signature: `(val: i32, ptr: i32) -> ()`
+    /// 
+    /// Writes the lower 8 bits of `val` to linear memory at `ptr + offset`.
+    #[doc(alias("i32.store8"))]
     I32StoreI8 {
         align: u32,
         offset: u32,
     },
-    /// `i32.store16`
+    /// `i32.store16`. Signature: `(val: i32, ptr: i32) -> ()`
+    /// 
+    /// Writes the lower 16 bits of `val` to linear memory at `ptr + offset`.
+    #[doc(alias("i32.store16"))]
     I32StoreI16 {
         align: u32,
         offset: u32,
     },
-    /// `i64.store8`
+    /// `i64.store8`. Signature: `(val: i64, ptr: i32) -> ()`
+    /// 
+    /// Writes the lower 8 bits of `val` to linear memory at `ptr + offset`.
+    #[doc(alias("i64.store8"))]
     I64StoreI8 {
         align: u32,
         offset: u32,
     },
-    /// `i64.store16`
+    /// `i64.store16`. Signature: `(val: i64, ptr: i32) -> ()`
+    /// 
+    /// Writes the lower 16 bits of `val` to linear memory at `ptr + offset`.
+    #[doc(alias("i64.store16"))]
     I64StoreI16 {
         align: u32,
         offset: u32,
     },
-    /// `i64.store32`
+    /// `i64.store32`. Signature: `(val: i64, ptr: i32) -> ()`
+    /// 
+    /// Writes the lower 32 bits of `val` to linear memory at `ptr + offset`.
+    #[doc(alias("i64.store32"))]
     I64StoreI32 {
         align: u32,
         offset: u32,
     },
 
-    /// `memory.size`
+    /// `memory.size`. Signature: `() -> (i32)`
+    /// 
+    /// Returns the size of linear memory, in pages. A page is 64KiB.
+    #[doc(alias("memory.size"))]
     MemorySize,
-    /// `memory.grow`
+    /// `memory.grow`. Signature: `(extra: i32) -> (i32)`
+    /// 
+    /// Grows linear memory by `extra` pages, then returns the previous size in 
+    /// pages. A page is 64KiB. 
+    #[doc(alias("memory.grow"))]
     MemoryGrow,
-    /// `memory.init`
+    /// `memory.init`. Signature: `(ptr: i32) -> (i32)`
+    /// 
+    /// Copies the data segment into linear memory, starting at `ptr`.
+    #[doc(alias("memory.init"))]
     MemoryInit(u32),
-    /// `data.drop`
+    /// `data.drop`. Signature: `() -> ()`
+    /// 
+    /// Gets rid of the given data segment.
+    #[doc(alias("data.drop"))]
     DataDrop(u32),
-    /// `memory.copy`
+    /// `memory.copy`. Signature: `(count: i32, src: i32, dest: i32) -> ()`
+    /// 
+    /// Copies the bytes at `src..src + count` to `dest..dest + count`.
+    #[doc(alias("memory.copy"))]
     MemoryCopy,
-    /// `memory.fill`
+    /// `memory.fill`. Signature: `(count: i32, val: i32, ptr: i32) -> ()`
+    /// 
+    /// Fills `ptr..ptr + count` of linear memory with the lower 8 bits of `val`
+    #[doc(alias("memory.fill"))]
     MemoryFill,
 
     // Numeric Instructions
-    /// `i32.const`
+    /// `i32.const`. Signature: `() -> (i32)`
+    /// 
+    /// Returns the immediate value.
+    #[doc(alias("i32.const"))]
     I32Const(i32),
-    /// `i64.const`
+    /// `i64.const`. Signature: `() -> (i64)`
+    /// 
+    /// Returns the immediate value.
+    #[doc(alias("i64.const"))]
     I64Const(i64),
-    /// `f32.const`
+    /// `f32.const`. Signature: `() -> (f32)`
+    /// 
+    /// Returns the immediate value.
+    #[doc(alias("f32.const"))]
     F32Const(f32),
-    /// `f64.const`
+    /// `f64.const`. Signature: `() -> (f64)`
+    /// 
+    /// Returns the immediate value.
+    #[doc(alias("f64.const"))]
     F64Const(f64),
 
-    /// `i32.eqz`
+    /// `i32.eqz`. Signature: `(a: i32) -> (i32)`
+    /// 
+    /// Returns `a == 0`
+    #[doc(alias("i32.eqz"))]
     I32EqualsZero,
-    /// `i32.eq`
+    /// `i32.eq`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a == b`
+    #[doc(alias("i32.eq"))]
     I32Equal,
-    /// `i32.ne`
+    /// `i32.ne`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a != b`
+    #[doc(alias("i32.ne"))]
     I32NotEqual,
-    /// `i32.lt_s`
+    /// `i32.lt_s`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as i32 < b as i32`
+    #[doc(alias("i32.lt_s"))]
     S32LessThan,
-    /// `i32.lt_u`
+    /// `i32.lt_u`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as u32 < b as u32`
+    #[doc(alias("i32.lt_u"))]
     U32LessThan,
-    /// `i32.gt_s`
+    /// `i32.gt_s`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as i32 > b as i32`
+    #[doc(alias("i32.gt_s"))]
     S32GreaterThan,
-    /// `i32.gt_u`
+    /// `i32.gt_u`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as u32 > b as u32`
+    #[doc(alias("i32.gt_u"))]
     U32GreaterThan,
-    /// `i32.le_s`
+    /// `i32.le_s`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as i32 <= b as i32`
+    #[doc(alias("i32.le_s"))]
     S32LessThanOrEqual,
-    /// `i32.le_u`
+    /// `i32.le_u`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as u32 <= b as u32`
+    #[doc(alias("i32.le_u"))]
     U32LessThanOrEqual,
-    /// `i32.ge_s`
+    /// `i32.ge_s`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as i32 >= b as i32`
+    #[doc(alias("i32.ge_s"))]
     S32GreaterThanOrEqual,
-    /// `i32.ge_u`
+    /// `i32.ge_u`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as u32 >= b as u32`
+    #[doc(alias("i32.ge_u"))]
     U32GreaterThanOrEqual,
 
-    /// `i64.eqz`
+    /// `i64.eqz`. Signature: `(a: i64) -> (i32)`
+    /// 
+    /// Returns `a == 0`
+    #[doc(alias("i64.eqz"))]
     I64EqualsZero,
-    /// `i64.eq`
+    /// `i64.eq`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a == b`
+    #[doc(alias("i64.eq"))]
     I64Equal,
-    /// `i64.ne`
+    /// `i64.ne`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a != b`
+    #[doc(alias("i64.ne"))]
     I64NotEqual,
-    /// `i64.lt_s`
+    /// `i64.lt_s`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as i64 < b as i64`
+    #[doc(alias("i64.lt_s"))]
     S64LessThan,
-    /// `i64.lt_u`
+    /// `i64.lt_u`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as u64 < b as u64`
+    #[doc(alias("i64.lt_u"))]
     U64LessThan,
-    /// `i64.gt_s`
+    /// `i64.gt_s`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as i64 > b as i64`
+    #[doc(alias("i64.gt_s"))]
     S64GreaterThan,
-    /// `i64.gt_u`
+    /// `i64.gt_u`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as u64 > b as u64`
+    #[doc(alias("i64.gt_u"))]
     U64GreaterThan,
-    /// `i64.le_s`
+    /// `i64.le_s`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as i64 <= b as i64`
+    #[doc(alias("i64.le_s"))]
     S64LessThanOrEqual,
-    /// `i64.le_u`
+    /// `i64.le_u`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as u64 <= b as u64`
+    #[doc(alias("i64.le_u"))]
     U64LessThanOrEqual,
-    /// `i64.ge_s`
+    /// `i64.ge_s`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as i64 >= b as i64`
+    #[doc(alias("i64.ge_s"))]
     S64GreaterThanOrEqual,
-    /// `i64.ge_u`
+    /// `i64.ge_u`. Signature: `(b: i64, a: i64) -> (i32)`
+    /// 
+    /// Returns `a as u64 >= b as u64`
+    #[doc(alias("i64.ge_u"))]
     U64GreaterThanOrEqual,
 
-    /// `f32.eq`
+    /// `f32.eq`. Signature: `(b: f32, a: f32) -> (i32)`
+    /// 
+    /// Returns `a == b`
+    #[doc(alias("f32.eq"))]
     F32Equal,
-    /// `f32.ne`
+    /// `f32.ne`. Signature: `(b: f32, a: f32) -> (i32)`
+    /// 
+    /// Returns `a != b`
+    #[doc(alias("f32.ne"))]
     F32NotEqual,
-    /// `f32.lt`
+    /// `f32.lt`. Signature: `(b: f32, a: f32) -> (i32)`
+    /// 
+    /// Returns `a < b`
+    #[doc(alias("f32.lt"))]
     F32LessThan,
-    /// `f32.gt`
+    /// `f32.gt`. Signature: `(b: f32, a: f32) -> (i32)`
+    /// 
+    /// Returns `a > b`
+    #[doc(alias("f32.gt"))]
     F32GreaterThan,
-    /// `f32.le`
+    /// `f32.le`. Signature: `(b: f32, a: f32) -> (i32)`
+    /// 
+    /// Returns `a <= b`
+    #[doc(alias("f32.le"))]
     F32LessThanOrEqual,
-    /// `f32.ge`
+    /// `f32.ge`. Signature: `(b: f32, a: f32) -> (i32)`
+    /// 
+    /// Returns `a >= b`
+    #[doc(alias("f32.ge"))]
     F32GreaterThanOrEqual,
 
-    /// `f64.eq`
+    /// `f64.eq`. Signature: `(b: f64, a: f64) -> (i32)`
+    /// 
+    /// Returns `a == b`
+    #[doc(alias("f64.eq"))]
     F64Equal,
-    /// `f64.ne`
+    /// `f64.ne`. Signature: `(b: f64, a: f64) -> (i32)`
+    /// 
+    /// Returns `a != b`
+    #[doc(alias("f64.ne"))]
     F64NotEqual,
-    /// `f64.lt`
+    /// `f64.lt`. Signature: `(b: f64, a: f64) -> (i32)`
+    /// 
+    /// Returns `a < b`
+    #[doc(alias("f64.lt"))]
     F64LessThan,
-    /// `f64.gt`
+    /// `f64.gt`. Signature: `(b: f64, a: f64) -> (i32)`
+    /// 
+    /// Returns `a > b`
+    #[doc(alias("f64.gt"))]
     F64GreaterThan,
-    /// `f64.le`
+    /// `f64.le`. Signature: `(b: f64, a: f64) -> (i32)`
+    /// 
+    /// Returns `a <= b`
+    #[doc(alias("f64.le"))]
     F64LessThanOrEqual,
-    /// `f64.ge`
+    /// `f64.ge`. Signature: `(b: f64, a: f64) -> (i32)`
+    /// 
+    /// Returns `a >= b`
+    #[doc(alias("f64.ge"))]
     F64GreaterThanOrEqual,
 
-    /// `i32.clz`
+    /// `i32.clz`. Signature: `(a: i32) -> (i32)`
+    /// 
+    /// Returns `a.leading_zeroes()`
+    #[doc(alias("i32.clz"))]
     I32CountLeadingZeroes,
-    /// `i32.ctz`
+    /// `i32.ctz`. Signature: `(a: i32) -> (i32)`
+    /// 
+    /// Returns `a.trailing_zeroes()`
+    #[doc(alias("i32.ctz"))]
     I32CountTrailingZeroes,
-    /// `i32.popcnt`
+    /// `i32.popcnt`. Signature: `(a: i32) -> (i32)`
+    /// 
+    /// Returns `a.count_ones()`
+    #[doc(alias("i32.popcnt"))]
     I32CountOnes,
-    /// `i32.add`
+    /// `i32.add`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a + b`
+    #[doc(alias("i32.add"))]
     I32Add,
-    /// `i32.sub`
+    /// `i32.sub`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a - b`
+    #[doc(alias("i32.sub"))]
     I32Sub,
-    /// `i32.mul`
+    /// `i32.mul`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a - b`
+    #[doc(alias("i32.mul"))]
     I32Mul,
-    /// `i32.div_s`
+    /// `i32.div_s`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as i32 / b as i32`
+    #[doc(alias("i32.div_s"))]
     S32Div,
-    /// `i32.div_u`
+    /// `i32.div_u`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as u32 / b as u32`
+    #[doc(alias("i32.div_u"))]
     U32Div,
-    /// `i32.rem_s`
+    /// `i32.rem_s`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as i32 % b as i32`
+    #[doc(alias("i32.rem_s"))]
     S32Rem,
-    /// `i32.rem_u`
+    /// `i32.rem_u`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as u32 % b as u32`
+    #[doc(alias("i32.rem_u"))]
     U32Rem,
-    /// `i32.and`
+    /// `i32.and`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a & b`
+    #[doc(alias("i32.and"))]
     I32And,
-    /// `i32.or`
+    /// `i32.or`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a | b`
+    #[doc(alias("i32.or"))]
     I32Or,
-    /// `i32.xor`
+    /// `i32.xor`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a ^ b`
+    #[doc(alias("i32.xor"))]
     I32Xor,
-    /// `i32.shl`
+    /// `i32.shl`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a << b`
+    #[doc(alias("i32.shl"))]
     I32ShiftLeft,
-    /// `i32.shr_s`
+    /// `i32.shr_s`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as i32 >> b`
+    #[doc(alias("i32.shr_s"))]
     S32ShiftRight,
-    /// `i32.shr_u`
+    /// `i32.shr_u`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a as u32 >> b`
+    #[doc(alias("i32.shr_u"))]
     U32ShiftRight,
-    /// `i32.rotl`
+    /// `i32.rotl`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a.rotate_left(b)`
+    #[doc(alias("i32.rotl"))]
     I32RotateLeft,
-    /// `i32.rotr`
+    /// `i32.rotr`. Signature: `(b: i32, a: i32) -> (i32)`
+    /// 
+    /// Returns `a.rotate_right(b)`
+    #[doc(alias("i32.rotr"))]
     I32RotateRight,
 
-    /// `i64.clz`
+    /// `i64.clz`. Signature: `(a: i64) -> (i64)`
+    /// 
+    /// Returns `a.leading_zeroes()`
+    #[doc(alias("i64.clz"))]
     I64CountLeadingZeroes,
-    /// `i64.ctz`
+    /// `i64.ctz`. Signature: `(a: i64) -> (i64)`
+    /// 
+    /// Returns `a.trailing_zeroes()`
+    #[doc(alias("i64.ctz"))]
     I64CountTrailingZeroes,
-    /// `i64.popcnt`
+    /// `i64.popcnt`nt`. Signature: `(a: i64) -> (i64)`
+    /// 
+    /// Returns `a.count_ones()`
+    #[doc(alias("i64.popcnt"))]
     I64CountOnes,
-    /// `i64.add`
+    /// `i64.add`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a + b`
+    #[doc(alias("i64.add"))]
     I64Add,
-    /// `i64.sub`
+    /// `i64.sub`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a - b`
+    #[doc(alias("i64.sub"))]
     I64Sub,
-    /// `i64.mul`
+    /// `i64.mul`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a - b`
+    #[doc(alias("i64.mul"))]
     I64Mul,
-    /// `i64.div_s`
+    /// `i64.div_s`s`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a as i64 / b as i64`
+    #[doc(alias("i64.div_s"))]
     S64Div,
-    /// `i64.div_u`
+    /// `i64.div_u`u`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a as u64 / b as u64`
+    #[doc(alias("i64.div_u"))]
     U64Div,
-    /// `i64.rem_s`
+    /// `i64.rem_s`s`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a as i64 % b as i64`
+    #[doc(alias("i64.rem_s"))]
     S64Rem,
-    /// `i64.rem_u`
+    /// `i64.rem_u`u`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a as u64 % b as u64`
+    #[doc(alias("i64.rem_u"))]
     U64Rem,
-    /// `i64.and`
+    /// `i64.and`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a & b`
+    #[doc(alias("i64.and"))]
     I64And,
-    /// `i64.or`
+    /// `i64.or` Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a | b`
+    #[doc(alias("i64.or"))]
     I64Or,
-    /// `i64.xor`
+    /// `i64.xor`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a ^ b`
+    #[doc(alias("i64.xor"))]
     I64Xor,
-    /// `i64.shl`
+    /// `i64.shl`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a << b`
+    #[doc(alias("i64.shl"))]
     I64ShiftLeft,
-    /// `i64.shr_s`
+    /// `i64.shr_s`s`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a as i64 >> b`
+    #[doc(alias("i64.shr_s"))]
     S64ShiftRight,
-    /// `i64.shr_u`
+    /// `i64.shr_u`u`. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a as u64 >> b`
+    #[doc(alias("i64.shr_u"))]
     U64ShiftRight,
-    /// `i64.rotl`
+    /// `i64.rotl``. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a.rotate_left(b)`
+    #[doc(alias("i64.rotl"))]
     I64RotateLeft,
-    /// `i64.rotr`
+    /// `i64.rotr``. Signature: `(b: i64, a: i64) -> (i64)`
+    /// 
+    /// Returns `a.rotate_right(b)`
+    #[doc(alias("i64.rotr"))]
     I64RotateRight,
 
-    /// `f32.abs`
+    /// `f32.abs`. Signature: `(a: f32) -> (f32)`
+    /// 
+    /// Returns `a.abs()`
+    #[doc(alias("f32.abs"))]
     F32AbsoluteValue,
-    /// `f32.neg`
+    /// `f32.neg`. Signature: `(a: f32) -> (f32)`
+    /// 
+    /// Returns `-a`
+    #[doc(alias("f32.neg"))]
     F32Negate,
-    /// `f32.ceil`
+    /// `f32.ceil`. Signature: `(a: f32) -> (f32)`
+    /// 
+    /// Returns `a.ceil()`
+    #[doc(alias("f32.ceil"))]
     F32Ceiling,
-    /// `f32.floor`
+    /// `f32.floor`. Signature: `(a: f32) -> (f32)`
+    /// 
+    /// Returns `a.floor()`
+    #[doc(alias("f32.floor"))]
     F32Floor,
-    /// `f32.trunc`
+    /// `f32.trunc`. Signature: `(a: f32) -> (f32)`
+    /// 
+    /// Returns `a.trunc()`
+    #[doc(alias("f32.trunc"))]
     F32Truncate,
-    /// `f32.nearest`
+    /// `f32.nearest`. Signature: `(a: f32) -> (f32)`
+    /// 
+    /// Returns `a.round()`
+    #[doc(alias("f32.nearest"))]
     F32Nearest,
-    /// `f32.sqrt`
+    /// `f32.sqrt`. Signature: `(a: f32) -> (f32)`
+    /// 
+    /// Returns `a.sqrt()`
+    #[doc(alias("f32.sqrt"))]
     F32SquareRoot,
-    /// `f32.add`
+    /// `f32.add`. Signature: `(b: f32, a: f32) -> (f32)`
+    /// 
+    /// Returns `a + b`
+    #[doc(alias("f32.add"))]
     F32Add,
-    /// `f32.sub`
+    /// `f32.sub`. Signature: `(b: f32, a: f32) -> (f32)`
+    /// 
+    /// Returns `a - b`
+    #[doc(alias("f32.sub"))]
     F32Sub,
-    /// `f32.mul`
+    /// `f32.mul`. Signature: `(b: f32, a: f32) -> (f32)`
+    /// 
+    /// Returns `a * b`
+    #[doc(alias("f32.mul"))]
     F32Mul,
-    /// `f32.div`
+    /// `f32.div`. Signature: `(b: f32, a: f32) -> (f32)`
+    /// 
+    /// Returns `a / b`
+    #[doc(alias("f32.div"))]
     F32Div,
-    /// `f32.min`
+    /// `f32.min`. Signature: `(b: f32, a: f32) -> (f32)`
+    /// 
+    /// Returns `a.min(b)`
+    #[doc(alias("f32.min"))]
     F32Min,
-    /// `f32.max`
+    /// `f32.max`. Signature: `(b: f32, a: f32) -> (f32)`
+    /// 
+    /// Returns `a.max(b)`
+    #[doc(alias("f32.max"))]
     F32Max,
-    /// `f32.copysign`
+    /// `f32.copysign`. Signature: `(b: f32, a: f32) -> (f32)`
+    /// 
+    /// Returns `a.copy_sign(b)`
+    #[doc(alias("f32.copysign"))]
     F32CopySign,
 
-    /// `f64.abs`
+    /// `f64.abs`. Signature: `(a: f64) -> (f64)`
+    /// 
+    /// Returns `a.abs()`
+    #[doc(alias("f64.abs"))]
     F64AbsoluteValue,
-    /// `f64.neg`
+    /// `f64.neg`. Signature: `(a: f64) -> (f64)`
+    /// 
+    /// Returns `-a`
+    #[doc(alias("f64.neg"))]
     F64Negate,
-    /// `f64.ceil`
+    /// `f64.ceil`. Signature: `(a: f64) -> (f64)`
+    /// 
+    /// Returns `a.ceil()`
+    #[doc(alias("f64.ceil"))]
     F64Ceiling,
-    /// `f64.floor`
+    /// `f64.floor`. Signature: `(a: f64) -> (f64)`
+    /// 
+    /// Returns `a.floor()`
+    #[doc(alias("f64.floor"))]
     F64Floor,
-    /// `f64.trunc`
+    /// `f64.trunc`. Signature: `(a: f64) -> (f64)`
+    /// 
+    /// Returns `a.trunc()`
+    #[doc(alias("f64.trunc"))]
     F64Truncate,
-    /// `f64.nearest`
+    /// `f64.nearest`. Signature: `(a: f64) -> (f64)`
+    /// 
+    /// Returns `a.round()`
+    #[doc(alias("f64.nearest"))]
     F64Nearest,
-    /// `f64.sqrt`
+    /// `f64.sqrt`. Signature: `(a: f64) -> (f64)`
+    /// 
+    /// Returns `a.sqrt()`
+    #[doc(alias("f64.sqrt"))]
     F64SquareRoot,
-    /// `f64.add`
+    /// `f64.add`. Signature: `(b: f64, a: f64) -> (f64)`
+    /// 
+    /// Returns `a + b`
+    #[doc(alias("f64.add"))]
     F64Add,
-    /// `f64.sub`
+    /// `f64.sub`. Signature: `(b: f64, a: f64) -> (f64)`
+    /// 
+    /// Returns `a - b`
+    #[doc(alias("f64.sub"))]
     F64Sub,
-    /// `f64.mul`
+    /// `f64.mul`. Signature: `(b: f64, a: f64) -> (f64)`
+    /// 
+    /// Returns `a * b`
+    #[doc(alias("f64.mul"))]
     F64Mul,
-    /// `f64.div`
+    /// `f64.div`. Signature: `(b: f64, a: f64) -> (f64)`
+    /// 
+    /// Returns `a / b`
+    #[doc(alias("f64.div"))]
     F64Div,
-    /// `f64.min`
+    /// `f64.min`. Signature: `(b: f64, a: f64) -> (f64)`
+    /// 
+    /// Returns `a.min(b)`
+    #[doc(alias("f64.min"))]
     F64Min,
-    /// `f64.max`
+    /// `f64.max`. Signature: `(b: f64, a: f64) -> (f64)`
+    /// 
+    /// Returns `a.max(b)`
+    #[doc(alias("f64.max"))]
     F64Max,
-    /// `f64.copysign`
+    /// `f64.copysign`. Signature: `(b: f64, a: f64) -> (f64)`
+    /// 
+    /// Returns `a.copy_sign(b)`
+    #[doc(alias("f64.copysign"))]
     F64CopySign,
 
-    /// `i32.wrap_i64`
+    /// `i32.wrap_i64`. Signature: `(a: i64) -> (i32)`
+    /// 
+    /// Returns `a` truncated to 32 bits.
+    #[doc(alias("i32.wrap_i64"))]
     I32WrapI64,
-    /// `i32.trunc_f32_s`
+    /// `i32.trunc_f32_s`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer.
+    #[doc(alias("i32.trunc_f32_s"))]
     S32TruncateF32,
-    /// `i32.trunc_f32_u`
+    /// `i32.trunc_f32_u`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer.
+    #[doc(alias("i32.trunc_f32_u"))]
     U32TruncateF32,
-    /// `i32.trunc_f64_s`
+    /// `i32.trunc_f64_s`. Signature: `(a: f64) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer.
+    #[doc(alias("i32.trunc_f64_s"))]
     S32TruncateF64,
-    /// `i32.trunc_f64_u`
+    /// `i32.trunc_f64_u`. Signature: `(a: f64) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer.
+    #[doc(alias("i32.trunc_f64_u"))]
     U32TruncateF64,
-    /// `i64.extend_i32_s`
+    /// `i64.extend_i32_s`. Signature: `(a: i32) -> (i64)`
+    /// 
+    /// Sign extends `a` to 64 bits.
+    #[doc(alias("i64.extend_i32_s"))]
     I64ExtendS32,
-    /// `i64.extend_i32_u`
+    /// `i64.extend_i32_u`. Signature: `(a: i32) -> (i64)`
+    /// 
+    /// Extends `a` to 64 bits.
+    #[doc(alias("i64.extend_i32_u"))]
     I64ExtendU32,
-    /// `i64.trunc_f32_s`
+    /// `i64.trunc_f32_s`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer.
+    #[doc(alias("i64.trunc_f32_s"))]
     S64TruncateF32,
-    /// `i64.trunc_f32_u`
+    /// `i64.trunc_f32_u`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer.
+    #[doc(alias("i64.trunc_f32_u"))]
     U64TruncateF32,
-    /// `i64.trunc_f64_s`
+    /// `i64.trunc_f64_s`. Signature: `(a: f64) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer.
+    #[doc(alias("i64.trunc_f64_s"))]
     S64TruncateF64,
-    /// `i64.trunc_f64_u`
+    /// `i64.trunc_f64_u`. Signature: `(a: f64) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer.
+    #[doc(alias("i64.trunc_f64_u"))]
     U64TruncateF64,
-    /// `f32.convert_i32_s`
+    /// `f32.convert_i32_s`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Returns `a as i32 as f32`.
+    #[doc(alias("f32.convert_i32_s"))]
     F32ConvertS32,
-    /// `f32.convert_i32_u`
+    /// `f32.convert_i32_u`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Returns `a as u32 as f32`.
+    #[doc(alias("f32.convert_i32_u"))]
     F32ConvertU32,
-    /// `f32.convert_i64_s`
+    /// `f32.convert_i64_s`. Signature: `(a: i64) -> (f32)`
+    /// 
+    /// Returns `a as i64 as f32`.
+    #[doc(alias("f32.convert_i64_s"))]
     F32ConvertS64,
-    /// `f32.convert_i64_u`
+    /// `f32.convert_i64_u`. Signature: `(a: i64) -> (f32)`
+    /// 
+    /// Returns `a as u64 as f32`.
+    #[doc(alias("f32.convert_i64_u"))]
     F32ConvertU64,
-    /// `f32.demote_f64`
+    /// `f32.demote_f64`. Signature: `(a: f64) -> (f32)`
+    /// 
+    /// Returns `a as f32`.
+    #[doc(alias("f32.demote_f64"))]
     F32DemoteF64,
-    /// `f64.convert_i32_s`
+    /// `f64.convert_i32_s`. Signature: `(a: i32) -> (f64)`
+    /// 
+    /// Returns `a as i32 as f64`.
+    #[doc(alias("f64.convert_i32_s"))]
     F64ConvertS32,
-    /// `f64.convert_i32_u`
+    /// `f64.convert_i32_u`. Signature: `(a: i32) -> (f64)`
+    /// 
+    /// Returns `a as u32 as f64`.
+    #[doc(alias("f64.convert_i32_u"))]
     F64ConvertU32,
-    /// `f64.convert_i64_s`
+    /// `f64.convert_i64_s`. Signature: `(a: i64) -> (f64)`
+    /// 
+    /// Returns `a as i64 as f64`.
+    #[doc(alias("f64.convert_i64_s"))]
     F64ConvertS64,
-    /// `f64.convert_i64_u`
+    /// `f64.convert_i64_u`. Signature: `(a: i64) -> (f64)`
+    /// 
+    /// Returns `a as u64 as f64`.
+    #[doc(alias("f64.convert_i64_u"))]
     F64ConvertU64,
-    /// `f64.promote_f32`
+    /// `f64.promote_f32`. Signature: `(a: f32) -> (f64)`
+    /// 
+    /// Returns `a as f64`.
+    #[doc(alias("f64.promote_f32"))]
     F64PromoteF32,
-    /// `i32.reinterpret_f32`
+    /// `i32.reinterpret_f32`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a.to_bits()`.
+    #[doc(alias("i32.reinterpret_f32"))]
     I32ReinterpretF32,
-    /// `i64.reinterpret_f64`
+    /// `i64.reinterpret_f64`. Signature: `(a: f64) -> (i64)`
+    /// 
+    /// Returns `a.to_bits()`.
+    #[doc(alias("i64.reinterpret_f64"))]
     I64ReinterpretF64,
-    /// `f32.reinterpret_i32`
+    /// `f32.reinterpret_i32`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Returns `f32::from_bits(a)`.
+    #[doc(alias("f32.reinterpret_i32"))]
     F32ReinterpretI32,
-    /// `f64.reinterpret_i64`
+    /// `f64.reinterpret_i64`. Signature: `(a: i64) -> (f64)`
+    /// 
+    /// Returns `f64::from_bits(a)`.
+    #[doc(alias("f64.reinterpret_i64"))]
     F64ReinterpretI64,
 
-    /// `i32.extend8_s`
+    /// `i32.extend8_s`. Signature: `(a: i32) -> (i32)`
+    /// 
+    /// Sign extends the lower 8 bits of `a`
+    #[doc(alias("i32.extend8_s"))]
     S32Extend8,
-    /// `i32.extend16_s`
+    /// `i32.extend16_s`. Signature: `(a: i32) -> (i32)`
+    /// 
+    /// Sign extends the lower 16 bits of `a`
+    #[doc(alias("i32.extend16_s"))]
     S32Extend16,
-    /// `i64.extend8_s`
+    /// `i64.extend8_s`. Signature: `(a: i64) -> (i64)`
+    /// 
+    /// Sign extends the lower 8 bits of `a`
+    #[doc(alias("i64.extend8_s"))]
     S64Extend8,
-    /// `i64.extend16_s`
+    /// `i64.extend16_s`. Signature: `(a: i64) -> (i64)`
+    /// 
+    /// Sign extends the lower 16 bits of `a`
+    #[doc(alias("i64.extend16_s"))]
     S64Extend16,
-    /// `i64.extend32_s`
+    /// `i64.extend32_s`. Signature: `(a: i64) -> (i64)`
+    /// 
+    /// Sign extends the lower 32 bits of `a`
+    #[doc(alias("i64.extend32_s"))]
     S64Extend32,
 
-    /// `i32.trunc_sat_f32_s`
+    /// `i32.trunc_sat_f32_s`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer, saturating to `i32::MAX`
+    #[doc(alias("i32.trunc_sat_f32_s"))]
     S32SaturatingTruncateF32,
-    /// `i32.trunc_sat_f32_u`
+    /// `i32.trunc_sat_f32_u`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer, saturating to `u32::MAX`
+    #[doc(alias("i32.trunc_sat_f32_u"))]
     U32SaturatingTruncateF32,
-    /// `i32.trunc_sat_f64_s`
+    /// `i32.trunc_sat_f64_s`. Signature: `(a: f64) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer, saturating to `i32::MAX`
+    #[doc(alias("i32.trunc_sat_f64_s"))]
     S32SaturatingTruncateF64,
-    /// `i32.trunc_sat_f64_u`
+    /// `i32.trunc_sat_f64_u`. Signature: `(a: f64) -> (i32)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer, saturating to `i32::MAX`
+    #[doc(alias("i32.trunc_sat_f64_u"))]
     U32SaturatingTruncateF64,
-    /// `i64.trunc_sat_f32_s`
+    /// `i64.trunc_sat_f32_s`. Signature: `(a: f32) -> (i64)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer, saturating to `i64::MAX`
+    #[doc(alias("i64.trunc_sat_f32_s"))]
     S64SaturatingTruncateF32,
-    /// `i64.trunc_sat_f32_u`
+    /// `i64.trunc_sat_f32_u`. Signature: `(a: f32) -> (i64)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer, saturating to `u64::MAX`
+    #[doc(alias("i64.trunc_sat_f32_u"))]
     U64SaturatingTruncateF32,
-    /// `i64.trunc_sat_f64_s`
+    /// `i64.trunc_sat_f64_s`. Signature: `(a: f64) -> (i64)`
+    /// 
+    /// Returns `a` rounded towards zero, as a signed integer, saturating to `i64::MAX`
+    #[doc(alias("i64.trunc_sat_f64_s"))]
     S64SaturatingTruncateF64,
-    /// `i64.trunc_sat_f64_u`
+    /// `i64.trunc_sat_f64_u`. Signature: `(a: f64) -> (i64)`
+    /// 
+    /// Returns `a` rounded towards zero, as an unsigned integer, saturating to `i64::MAX`
+    #[doc(alias("i64.trunc_sat_f64_u"))]
     U64SaturatingTruncateF64,
 
+    /// `v128.load`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads a `v128` from linear memory at `ptr + offset`.
+    #[doc(alias("v128.load"))]
     V128Load {
         align: u32,
         offset: u32,
     },
+    /// `v128.load8x8_s`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads 8 contiguous 8-bit values from linear memory at `ptr`, sign 
+    /// extends them to 16 bits, then puts those in the lanes of an `i16x8`.
+    #[doc(alias("v128.load8x8_s"))]
     V128LoadS8x8 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load8x8_u`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads 8 contiguous 8-bit values from linear memory at `ptr`, extends 
+    /// them to 16 bits, then puts those in the lanes of an `i16x8`.
+    #[doc(alias("v128.load8x8_u"))]
     V128LoadU8x8 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load16x4_s`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads 4 contiguous 16-bit values from linear memory at `ptr`, sign 
+    /// extends them to 32 bits, then puts those in the lanes of an `i32x4`.
+    #[doc(alias("v128.load16x4_s"))]
     V128LoadS16x4 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load16x4_u`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads 4 contiguous 32-bit values from linear memory at `ptr`, extends 
+    /// them to 32 bits, then puts those in the lanes of an `i32x4`.
+    #[doc(alias("v128.load16x4_u"))]
     V128LoadU16x4 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load32x2_s`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads 2 contiguous 32-bit values from linear memory at `ptr`, sign 
+    /// extends them to 64 bits, then puts those in the lanes of an `i64x2`.
+    #[doc(alias("v128.load32x2_s"))]
     V128LoadS32x2 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load32x2_u`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads 2 contiguous 32-bit values from linear memory at `ptr`, extends 
+    /// them to 64 bits, then puts those in the lanes of an `i64x2`.
+    #[doc(alias("v128.load32x2_u"))]
     V128LoadU32x2 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load8_splat`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads an 8-bit value from linear memory at `ptr`, and copies it into 
+    /// every lane of an `i8x16`.
+    #[doc(alias("v128.load8_splat"))]
     V128LoadSplatI8 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load16_splat`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads a 16-bit value from linear memory at `ptr`, and copies it into 
+    /// every lane of an `i16x8`.
+    #[doc(alias("v128.load16_splat"))]
     V128LoadSplatI16 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load32_splat`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads a 32-bit value from linear memory at `ptr`, and copies it into 
+    /// every lane of an `i32x4`.
+    #[doc(alias("v128.load32_splat"))]
     V128LoadSplatI32 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load64_splat`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads a 64-bit value from linear memory at `ptr`, and copies it into 
+    /// both lanes of an `i64x2`.
+    #[doc(alias("v128.load64_splat"))]
     V128LoadSplatI64 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load32_zero`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads a 32-bit value from linear memory at `ptr`, and puts it into the 
+    /// first lane of an `i32x4`. Every other lane is zero.
+    #[doc(alias("v128.load32_zero"))]
     V128LoadZeroI32 {
         align: u32,
         offset: u32,
     },
+    /// `v128.load64_zero`. Signature: `(ptr: i32) -> (v128)`
+    /// 
+    /// Loads a 64-bit value from linear memory at `ptr`, and puts it into the 
+    /// first lane of an `i64x2`. The other lane is zero.
+    #[doc(alias("v128.load64_zero"))]
     V128LoadZeroI64 {
         align: u32,
         offset: u32,
     },
+    /// `v128.store`. Signature: `(vec: v128, ptr: i32) -> ()`
+    /// 
+    /// Stores `vec` into linear memoery at `ptr`.
+    #[doc(alias("v128.store"))]
     V128Store {
         align: u32,
         offset: u32,
     },
+    /// `v128.load8_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
+    /// 
+    /// Loads an 8-bit value from linear memory at `ptr`, and puts it into the
+    /// specified lane of `vec`.
+    #[doc(alias("v128.load8_lane"))]
     V128Load8Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
+    /// `v128.load16_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
+    /// 
+    /// Loads an 16-bit value from linear memory at `ptr`, and puts it into the
+    /// specified lane of `vec`.
+    #[doc(alias("v128.load16_lane"))]
     V128Load16Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
+    /// `v128.load32_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
+    /// 
+    /// Loads an 32-bit value from linear memory at `ptr`, and puts it into the
+    /// specified lane of `vec`.
+    #[doc(alias("v128.load32_lane"))]
     V128Load32Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
+    /// `v128.load64_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
+    /// 
+    /// Loads an 64-bit value from linear memory at `ptr`, and puts it into the
+    /// specified lane of `vec`.
+    #[doc(alias("v128.load64_lane"))]
     V128Load64Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
+    /// `v128.store8_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
+    /// 
+    /// Stores the 8-bit in the specified lane of `vec` into linear memory at `ptr`
+    #[doc(alias("v128.store8_lane"))]
     V128Store8Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
+    /// `v128.store16_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
+    /// 
+    /// Stores the 16-bit in the specified lane of `vec` into linear memory at `ptr`
+    #[doc(alias("v128.store16_lane"))]
     V128Store16Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
+    /// `v128.store32_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
+    /// 
+    /// Stores the 32-bit in the specified lane of `vec` into linear memory at `ptr`
+    #[doc(alias("v128.store32_lane"))]
     V128Store32Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
+    /// `v128.store64_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
+    /// 
+    /// Stores the 64-bit in the specified lane of `vec` into linear memory at `ptr`
+    #[doc(alias("v128.store64_lane"))]
     V128Store64Lane {
         align: u32,
         offset: u32,
         lane: u8,
     },
 
+    /// `v128.const`. Signature: `() -> (v128)`
+    /// 
+    /// Returns the immediate little-endian bytes as a `v128`
+    #[doc(alias("v128.const"))]
     V128Const([u8; 16]),
 
+    /// `i8x16.shuffle`. Signature: `(vec: v128) -> (v128)`
+    /// 
+    /// Replaces `vec[i]` with `vec[lanes[i]]`.
+    #[doc(alias("i8x16.shuffle"))]
     I8x16Shuffle {
         lanes: [u8; 16],
     },
+    /// `i8x16.extract_lane_s`. Signature: `(vec: v128) -> (i32)`
+    /// 
+    /// Returns the value in the given lane of `vec`, sign extended to 32 bits.
+    #[doc(alias("i8x16.extract_lane_s"))]
     S8x16ExtractLane {
         lane: u8,
     },
+    /// `i8x16.extract_lane_u`. Signature: `(vec: v128) -> (i32)`
+    /// 
+    /// Returns the value in the given lane of `vec`, extended to 32 bits.
+    #[doc(alias("i8x16.extract_lane_u"))]
     U8x16ExtractLane {
         lane: u8,
     },
+    /// `i8x16.replace_lane`. Signature: `(x: i32, vec: v128) -> (v128)`
+    /// 
+    /// Replaces the value in the given lane of `vec` with the lower 8 bits of `x`
+    #[doc(alias("i8x16.replace_lane"))]
     I8x16ReplaceLane {
         lane: u8,
     },
+    /// `i16x8.extract_lane_s`. Signature: `(vec: v128) -> (i32)`
+    /// 
+    /// Returns the value in the given lane, sign extended to 32 bits.
+    #[doc(alias("i16x8.extract_lane_s"))]
     S16x8ExtractLane {
         lane: u8,
     },
+    /// `i16x8.extract_lane_u`. Signature: `(vec: v128) -> (i32)`
+    /// 
+    /// Returns the value in the given lane, extended to 32 bits.
+    #[doc(alias("i16x8.extract_lane_u"))]
     U16x8ExtractLane {
         lane: u8,
     },
+    /// `i16x8.replace_lane`. Signature: `(x: i32, vec: v128) -> (v128)`
+    /// 
+    /// Replaces the value in the given lane of `vec` with the lower 16 bits of `x`
+    #[doc(alias("i16x8.replace_lane"))]
     I16x8ReplaceLane {
         lane: u8,
     },
+    /// `i32x4.extract_lane`. Signature: `(vec: v128) -> (i32)`
+    /// 
+    /// Returns the value in the given lane.
+    #[doc(alias("i32x4.extract_lane"))]
     I32x4ExtractLane {
         lane: u8,
     },
+    /// `i32x4.replace_lane`. Signature: `(x: i32, vec: v128) -> (v128)`
+    /// 
+    /// Replaces the value in the given lane of `vec` with `x`
+    #[doc(alias("i32x4.replace_lane"))]
     I32x4ReplaceLane {
         lane: u8,
     },
+    /// `i64x2.extract_lane`. Signature: `(vec: v128) -> (i64)`
+    /// 
+    /// Returns the value in the given lane.
+    #[doc(alias("i64x2.extract_lane"))]
     I64x2ExtractLane {
         lane: u8,
     },
+    /// `i64x2.replace_lane`. Signature: `(x: i64, vec: v128) -> (v128)`
+    /// 
+    /// Replaces the value in the given lane of `vec` with `x`
+    #[doc(alias("i64x2.replace_lane"))]
     I64x2ReplaceLane {
         lane: u8,
     },
+    /// `f32x4.extract_lane`. Signature: `(vec: v128) -> (f32)`
+    /// 
+    /// Returns the value in the given lane.
+    #[doc(alias("f32x4.extract_lane"))]
     F32x4ExtractLane {
         lane: u8,
     },
+    /// `f32x4.replace_lane`. Signature: `(x: f32, vec: v128) -> (v128)`
+    /// 
+    /// Replaces the value in the given lane of `vec` with `x`
+    #[doc(alias("f32x4.replace_lane"))]
     F32x4ReplaceLane {
         lane: u8,
     },
+    /// `f64x2.extract_lane`. Signature: `(vec: v128) -> (f64)`
+    /// 
+    /// Returns the value in the given lane.
+    #[doc(alias("f64x2.extract_lane"))]
     F64x2ExtractLane {
         lane: u8,
     },
+    /// `f64x2.replace_lane`. Signature: `(x: f64, vec: v128) -> (v128)`
+    /// 
+    /// Replaces the value in the given lane of `vec` with `x`
+    #[doc(alias("f64x2.replace_lane"))]
     F64x2ReplaceLane {
         lane: u8,
     },
+    /// `i8x16.swizzle`. Signature: `(a: v128, b: v128) -> (v128)`
+    /// 
+    /// Replaces `a[i]` with `a[b[i]]`, then returns `a`. If `b[i]` is > 16, it
+    /// yields 0.
+    #[doc(alias("i8x16.swizzle"))]
     I8x16Swizzle,
+    /// `i8x16.splat`. Signature: `(x: i32) -> (v128)`
+    /// 
+    /// Creates a new `v128` with every lane set to the lower 8 bits of `x`.
+    #[doc(alias("i8x16.splat"))]
     I8x16Splat,
+    /// `i16x8.splat`. Signature: `(x: i32) -> (v128)`
+    /// 
+    /// Creates a new `v128` with every lane set to the lower 16 bits of `x`.
+    #[doc(alias("i16x8.splat"))]
     I16x8Splat,
+    /// `i32x4.splat`. Signature: `(x: i32) -> (v128)`
+    /// 
+    /// Creates a new `v128` with every lane set to `x`.
+    #[doc(alias("i32x4.splat"))]
     I32x4Splat,
+    /// `i64x2.splat`. Signature: `(x: i64) -> (v128)`
+    /// 
+    /// Creates a new `v128` with every lane set to `x`.
+    #[doc(alias("i64x2.splat"))]
     I64x2Splat,
+    /// `f32x4.splat`. Signature: `(x: f32) -> (v128)`
+    /// 
+    /// Creates a new `v128` with every lane set to `x`.
+    #[doc(alias("i32x4.splat"))]
     F32x4Splat,
+    /// `f64x2.splat`. Signature: `(x: f64) -> (v128)`
+    /// 
+    /// Creates a new `v128` with every lane set to`x`.
+    #[doc(alias("i64x2.splat"))]
     F64x2Splat,
 
+    /// `i8x16.eq`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] == b[i]` and puts the results into the lanes of a new `v128`
+    #[doc(alias("i8x16.eq"))]
     I8x16Equal,
+    /// `i8x16.ne`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] != b[i]` and puts the results into the lanes of a new `v128`
+    #[doc(alias("i8x16.ne"))]
     I8x16NotEqual,
+    /// `i8x16.lt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i8 < b[i] as i8` and puts the results into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.lt"))]
     S8x16LessThan,
+    /// `i8x16.lt_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u8 < b[i] as u8` and puts the results into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.eq"))]
     U8x16LessThan,
+    /// `i8x16.gt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i8 > b[i] as i8` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.gt_s"))]
     S8x16GreaterThan,
+    /// `i8x16.gt_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u8 > b[i] as u8` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.gt_u"))]
     U8x16GreaterThan,
+    /// `i8x16.le_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i8 <= b[i] as i8` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.le_s"))]
     S8x16LessThanOrEqual,
+    /// `i8x16.le_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u8 <= b[i] as u8` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.le_u"))]
     U8x16LessThanOrEqual,
+    /// `i8x16.ge_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i8 >= b[i] as i8` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.ge_s"))]
     S8x16GreaterThanOrEqual,
+    /// `i8x16.ge_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u8 >= b[i] as u8` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i8x16.ge_u"))]
     U8x16GreaterThanOrEqual,
 
+    /// `i16x8.eq`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] == b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i16x8.eq"))]
     I16x8Equal,
+    /// `i16x8.ne`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] != b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i16x8.ne"))]
     I16x8NotEqual,
+    /// `i16x8.lt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i16 < b[i] as i16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.lt_s"))]
     S16x8LessThan,
+    /// `i16x8.lt_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u16 < b[i] as u16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.lt_u"))]
     U16x8LessThan,
+    /// `i16x8.gt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i16 > b[i] as i16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.gt_s"))]
     S16x8GreaterThan,
+    /// `i16x8.gt_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u16 > b[i] as u16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.gt_u"))]
     U16x8GreaterThan,
+    /// `i16x8.le_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i16 <= b[i] as i16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.le_s"))]
     S16x8LessThanOrEqual,
+    /// `i16x8.le_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u16 <= b[i] as u16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.le_u"))]
     U16x8LessThanOrEqual,
+    /// `i16x8.ge_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i16 >= b[i] as i16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.ge_s"))]
     S16x8GreaterThanOrEqual,
+    /// `i16x8.ge_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u16 >= b[i] as u16` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i16x8.ge_u"))]
     U16x8GreaterThanOrEqual,
 
+    /// `i32x4.eq`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] == b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i32x4.eq"))]
     I32x4Equal,
+    /// `i32x4.ne`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] != b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i32x4.ne"))]
     I32x4NotEqual,
+    /// `i32x4.lt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i32 < b[i] as i32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.lt_s"))]
     S32x4LessThan,
+    /// `i32x4.lt_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u32 < b[i] as u32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.lt_u"))]
     U32x4LessThan,
+    /// `i32x4.gt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i32 > b[i] as i32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.gt_s"))]
     S32x4GreaterThan,
+    /// `i32x4.gt_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u32 > b[i] as u32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.gt_u"))]
     U32x4GreaterThan,
+    /// `i32x4.le_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i32 <= b[i] as i32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.le_s"))]
     S32x4LessThanOrEqual,
+    /// `i32x4.le_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u32 <= b[i] as u32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.le_u"))]
     U32x4LessThanOrEqual,
+    /// `i32x4.ge_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i32 >= b[i] as i32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.ge_s"))]
     S32x4GreaterThanOrEqual,
+    /// `i32x4.ge_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as u32 >= b[i] as u32` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i32x4.ge_u"))]
     U32x4GreaterThanOrEqual,
 
+    /// `i64x2.eq`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] == b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i64x2.eq"))]
     I64x2Equal,
+    /// `i64x2.ne`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] != b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i64x2.ne"))]
     I64x2NotEqual,
+    /// `i64x2.lt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i64 < b[i] as i64` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i64x2.lt_s"))]
     S64x2LessThan,
+    /// `i64x2.gt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i64 > b[i] as i64` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i64x2.gt_s"))]
     S64x2GreaterThan,
+    /// `i64x2.le_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i64 <= b[i] as i64` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i64x2.le_s"))]
     S64x2LessThanOrEqual,
+    /// `i64x2.ge_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] as i64 >= b[i] as i64` and puts the result into the lanes 
+    /// of a new `v128`
+    #[doc(alias("i64x2.ge_s"))]
     S64x2GreaterThanOrEqual,
 
+    /// `f32x4.eq`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] == b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("f32x4.eq"))]
     F32x4Equal,
+    /// `f32x4.ne`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] != b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("f32x4.ne"))]
     F32x4NotEqual,
+    /// `f32x4.lt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] < b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i3fx4.lt_s"))]
     F32x4LessThan,
+    /// `f32x4.gt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] > b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i3fx4.gt_s"))]
     F32x4GreaterThan,
+    /// `f32x4.le_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] <= b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i3fx4.le_s"))]
     F32x4LessThanOrEqual,
+    /// `f32x4.ge_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] >= b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i3fx4.ge_s"))]
     F32x4GreaterThanOrEqual,
 
+    /// `f64x2.eq`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] == b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("f64x2.eq"))]
     F64x2Equal,
+    /// `f64x2.ne`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] != b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("f64x2.ne"))]
     F64x2NotEqual,
+    /// `f64x2.lt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] < b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i64x2.lt_s"))]
     F64x2LessThan,
+    /// `f64x2.gt_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] > b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i64x2.gt_s"))]
     F64x2GreaterThan,
+    /// `f64x2.le_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] <= b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i64x2.le_s"))]
     F64x2LessThanOrEqual,
+    /// `f64x2.ge_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] >= b[i]` and puts the result into the lanes of a new `v128`
+    #[doc(alias("i64x2.ge_s"))]
     F64x2GreaterThanOrEqual,
 
+    /// `v128.not`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes bitwise NOT of `a`
+    #[doc(alias("v128.not"))]
     V128Not,
+    /// `v128.and`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes bitwise AND of `a` and `b`
+    #[doc(alias("v128.and"))]
     V128And,
+    /// `v128.andnot`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes bitwise NAND of `a` and `b`
+    #[doc(alias("v128.andnot"))]
     V128AndNot,
+    /// `v128.or`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes bitwise OR of `a` and `b`
+    #[doc(alias("v128.or"))]
     V128Or,
+    /// `v128.xor`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes bitwise XOR of `a` and `b`
+    #[doc(alias("v128.xor"))]
     V128Xor,
+    /// `v128.bitselect`. Signature: `(c: v128, b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a ^ c) | (b ^ !c)`.
+    /// 
+    /// This has the effect of selecting between the bits of `a` and `b` based
+    /// on the bits of `c`, hence "bitselect".
+    #[doc(alias("v128.bitselect"))]
     V128BitSelect,
+    /// `v128.`. Signature: `(a: v128) -> (i32)`
+    /// 
+    /// Checks if any bit of `a` is 1, returning 1 if so, and 0 if not.
+    #[doc(alias("v128.any_true"))]
     V128AnyTrue,
 
+    /// `i8x16.abs`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].abs()`.
+    #[doc(alias("i8x16.abs"))]
     I8x16Abs,
+    /// `i8x16.neg`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `-a[i]`.
+    #[doc(alias("i8x16.neg"))]
     I8x16Neg,
+    /// `i8x16.popcnt`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].count_ones()`.
+    #[doc(alias("i8x16.popcnt"))]
     I8x16CountOnes,
+    /// `i8x16.abs`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Checks that all lanes are non-zero. If they are, returns 1, if not,
+    /// returns 0.
+    #[doc(alias("i8x16.all_true"))]
     I8x16AllTrue,
+    /// `i8x16.bitmask`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Returns an integer with each bit set if the corresponding lane of `a` is non-zero.
+    #[doc(alias("i8x16.bitmask"))]
     I8x16Bitmask,
+    /// `i8x16.narrow_i16x8_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Shortens each 16-bit lane of `a` and `b` to a signed 8-bit integer, 
+    /// saturating, then returns a new `v128` with the lower 8 lanes being the 
+    /// shortened `a`, and the upper 8 lanes being the shortened `b`
+    #[doc(alias("i8x16.narrow_i16x8_s"))]
     S8x16NarrowI16x8,
+    /// `i8x16.narrow_i16x8_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Shortens each 16-bit lane of `a` and `b` to an unsigned 8-bit integer, 
+    /// saturating, then returns a new `v128` with the lower 8 lanes being the 
+    /// shortened `a`, and the upper 8 lanes being the shortened `b`
+    #[doc(alias("i8x16.narrow_i16x8_u"))]
     U8x16NarrowI16x8,
+    /// `i8x16.shl`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` left by `x` bits.
+    #[doc(alias("i8x16.shl"))]
     I8x16Shl,
+    /// `i8x16.shr_s`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` right by `x` bits, signed.
+    #[doc(alias("i8x16.shr_s"))]
     S8x16Shr,
+    /// `i8x16.shr_u`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` right by `x` bits, unsigned.
+    #[doc(alias("i8x16.shr_u"))]
     U8x16Shr,
+    /// `i8x16.add`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`.
+    #[doc(alias("i8x16.add"))]
     I8x16Add,
+    /// `i8x16.add_sat_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`, saturating at the signed max value.
+    #[doc(alias("i8x16.add_sat_s"))]
     S8x16AddSaturate,
+    /// `i8x16.add_sat_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`, saturating at the unsigned max value.
+    #[doc(alias("i8x16.add_sat_u"))]
     U8x16AddSaturate,
+    /// `i8x16.sub`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`.
+    #[doc(alias("i8x16.sub"))]
     I8x16Sub,
+    /// `i8x16.sub_sat_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`, saturating at the signed minimum value.
+    #[doc(alias("i8x16.sub_sat_s"))]
     S8x16SubSaturate,
+    /// `i8x16.sub_sat_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`, saturating at zero.
+    #[doc(alias("i8x16.sub_sat_u"))]
     U8x16SubSaturate,
+    /// `i8x16.min_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as i8).min(b[i] as i8)`.
+    #[doc(alias("i8x16.min_s"))]
     S8x16Min,
+    /// `i8x16.min_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as u8).min(b[i] as u8)`.
+    #[doc(alias("i8x16.min_u"))]
     U8x16Min,
+    /// `i8x16.max_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as i8).max(b[i] as i8)`.
+    #[doc(alias("i8x16.max_s"))]
     S8x16Max,
+    /// `i8x16.max_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as u8).max(b[i] as u8)`.
+    #[doc(alias("i8x16.max_u"))]
     U8x16Max,
+    /// `i8x16.avgr_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes the average of `a[i]` and `b[i]`, rounding towards zero.
+    #[doc(alias("i8x16.avgr_u"))]
     U8x16Avgr,
 
+    /// `i16x8.extadd_pairwise_i8x16_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends each lane to 16 bits, then adds each pair.
+    #[doc(alias("i16x8.extadd_pairwise_i8x16_s"))]
     I16x8ExtendAddPairwiseS8x16,
+    /// `i16x8.extadd_pairwise_i8x16_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends each lane to 16 bits, then adds each pair.
+    #[doc(alias("i16x8.extadd_pairwise_i8x16_u"))]
     I16x8ExtendAddPairwiseU8x16,
+    /// `i16x8.abs`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].abs()`
+    #[doc(alias("i16x8.abs"))]
     I16x8Abs,
+    /// `i16x8.neg`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `-a[i]`
+    #[doc(alias("i16x8.neg"))]
     I16x8Neg,
+    /// `i16x8.q15mulr_sat_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(((a[i] as i32 * b[i] as i32) + (2.pow(14))) >> 15) as i16`, saturating.
+    #[doc(alias("i16x8.q15mulr_sat_s"))]
     S16x8Q15MulRSat,
+    /// `i16x8.all_true`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Checks that all lanes are non-zero. If they are, returns 1, if not,
+    /// returns 0.
+    #[doc(alias("i16x8.all_true"))]
     I16x8AllTrue,
+    /// `i16x8.bitmask`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Returns an integer with each bit set if the corresponding lane of `a` is non-zero.
+    #[doc(alias("i16x8.bitmask"))]
     I16x8Bitmask,
+    /// `i16x8.narrow_i32x4_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Shortens each 32-bit lane of `a` and `b` to a signed 32-bit integer, 
+    /// saturating, then returns a new `v128` with the lower 4 lanes being the 
+    /// shortened `a`, and the upper 4 lanes being the shortened `b`
+    #[doc(alias("i16x8.narrow_i32x4_s"))]
     S16x8NarrowI32x4,
+    /// `i16x8.narrow_i32x4_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Shortens each 32-bit lane of `a` and `b` to an unsigned 32-bit integer, 
+    /// saturating, then returns a new `v128` with the lower 4 lanes being the 
+    /// shortened `a`, and the upper 4 lanes being the shortened `b`
+    #[doc(alias("i16x8.narrow_i32x4_u"))]
     U16x8NarrowI32x4,
+    /// `i16x8.extend_low_i8x16_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends the lower 8 lanes of `a` to 16 bits
+    #[doc(alias("i16x8.extend_low_i8x16_s"))]
     I16x8ExtendLowS8x16,
+    /// `i16x8.extend_high_i8x16_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends the upper 8 lanes of `a` to 16 bits
+    #[doc(alias("i16x8.extend_high_i8x16_s"))]
     I16x8ExtendHighS8x16,
+    /// `i16x8.extend_low_i8x16_u`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends the lower 8 lanes of `a` to 16 bits
+    #[doc(alias("i16x8.extend_low_i8x16_u"))]
     I16x8ExtendLowU8x16,
+    /// `i16x8.extend_high_i8x16_u`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends the upper 8 lanes of `a` to 16 bits
+    #[doc(alias("i16x8.extend_high_i8x16_u"))]
     I16x8ExtendHighU8x16,
+    /// `i16x8.shl`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` left by `x` bits.
+    #[doc(alias("i16x8.shl"))]
     I16x8Shl,
+    /// `i16x8.shr_s`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` right by `x` bits, signed.
+    #[doc(alias("i16x8.shr_s"))]
     S16x8Shr,
+    /// `i16x8.shr_u`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` right by `x` bits, unsigned.
+    #[doc(alias("i16x8.shr_u"))]
     U16x8Shr,
+    /// `i16x8.add`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`.
+    #[doc(alias("i16x8.add"))]
     I16x8Add,
+    /// `i16x8.add_sat_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`, saturating at the signed max value.
+    #[doc(alias("i16x8.add_sat_s"))]
     S16x8AddSaturate,
+    /// `i16x8.add_sat_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`, saturating at the unsigned max value.
+    #[doc(alias("i16x8.add_sat_u"))]
     U16x8AddSaturate,
+    /// `i16x8.sub`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`.
+    #[doc(alias("i16x8.sub"))]
     I16x8Sub,
+    /// `i16x8.sub_sat_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`, saturating at the signed minimum value.
+    #[doc(alias("i16x8.sub_sat_s"))]
     S16x8SubSaturate,
+    /// `i16x8.sub_sat_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`, saturating at zero.
+    #[doc(alias("i16x8.sub_sat_u"))]
     U16x8SubSaturate,
+    /// `i16x8.mul`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] * b[i]`.
+    #[doc(alias("i16x8.mul"))]
     I16x8Mul,
+    /// `i16x8.min_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as i16).min(b[i] as i16)`.
+    #[doc(alias("i16x8.min_s"))]
     S16x8Min,
+    /// `i16x8.min_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as u16).min(b[i] as u16)`.
+    #[doc(alias("i16x8.min_u"))]
     U16x8Min,
+    /// `i16x8.max_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as i16).max(b[i] as i16)`.
+    #[doc(alias("i16x8.max_s"))]
     S16x8Max,
+    /// `i16x8.max_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as u16).max(b[i] as u16)`.
+    #[doc(alias("i16x8.max_u"))]
     U16x8Max,
+    /// `i16x8.avgr_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes the average of `a[i]` and `b[i]`, rounding towards zero.
+    #[doc(alias("i16x8.avgr_u"))]
     U16x8Avgr,
+    /// `i16x8.extmul_low_i8x16_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Sign extends the lower 8 lanes of `a` and `b` to 16 bits, then 
+    /// multiplies them together.
+    #[doc(alias("i16x8.extmul_low_i8x16_s"))]
     I16x8ExtMulLowS8x16,
+    /// `i16x8.extmul_low_i8x16_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Sign extends the higher 8 lanes of `a` and `b` to 16 bits, then 
+    /// multiplies them together.
+    #[doc(alias("i16x8.extmul_high_i8x16_s"))]
     I16x8ExtMulHighS8x16,
+    /// `i16x8.extmul_low_i8x16_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Extends the lower 8 lanes of `a` and `b` to 16 bits, then multiplies 
+    /// them together.
+    #[doc(alias("i16x8.extmul_low_i8x16_u"))]
     I16x8ExtMulLowU8x16,
+    /// `i16x8.extmul_low_i8x16_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Extends the higher 8 lanes of `a` and `b` to 16 bits, then multiplies 
+    /// them together.
+    #[doc(alias("i16x8.extmul_high_i8x16_u"))]
     I16x8ExtMulHighU8x16,
 
+    /// `i32x4.extadd_pairwise_i8x16_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends each lane to 16 bits, then adds each pair.
+    #[doc(alias("i32x4.extadd_pairwise_i8x16_s"))]
     I32x4ExtendAddPairwiseS16x8,
+    /// `i32x4.extadd_pairwise_i8x16_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends each lane to 16 bits, then adds each pair.
+    #[doc(alias("i32x4.extadd_pairwise_i8x16_u"))]
     I32x4ExtendAddPairwiseU16x8,
+    /// `i32x4.abs`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].abs()`
+    #[doc(alias("i32x4.abs"))]
     I32x4Abs,
+    /// `i32x4.neg`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `-a[i]`
+    #[doc(alias("i32x4.neg"))]
     I32x4Neg,
+    /// `i32x4.all_true`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Checks that all lanes are non-zero. If they are, returns 1, if not,
+    /// returns 0.
+    #[doc(alias("i32x4.all_true"))]
     I32x4AllTrue,
+    /// `i32x4.bitmask`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Returns an integer with each bit set if the corresponding lane of `a` is non-zero.
+    #[doc(alias("i32x4.bitmask"))]
     I32x4Bitmask,
+    /// `i32x4.extend_low_i16x8_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends the lower 4 lanes of `a` to 32 bits
+    #[doc(alias("i32x4.extend_low_i16x8_s"))]
     I32x4ExtendLowS16x8,
+    /// `i32x4.extend_high_i16x8_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends the upper 4 lanes of `a` to 32 bits
+    #[doc(alias("i32x4.extend_high_i16x8_s"))]
     I32x4ExtendHighS16x8,
+    /// `i32x4.extend_low_i16x8_u`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends the lower 4 lanes of `a` to 32 bits
+    #[doc(alias("i32x4.extend_low_i16x8_u"))]
     I32x4ExtendLowU16x8,
+    /// `i32x4.extend_high_i16x8_u`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends the upper 4 lanes of `a` to 32 bits
+    #[doc(alias("i32x4.extend_high_i16x8_u"))]
     I32x4ExtendHighU16x8,
+    /// `i32x4.shl`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` left by `x` bits.
+    #[doc(alias("i32x4.shl"))]
     I32x4Shl,
+    /// `i32x4.shr_s`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` right by `x` bits, signed.
+    #[doc(alias("i32x4.shr_s"))]
     S32x4Shr,
+    /// `i32x4.shr_u`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts every lane of `v` right by `x` bits, unsigned.
+    #[doc(alias("i32x4.shr_u"))]
     U32x4Shr,
+    /// `i32x4.add`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`.
+    #[doc(alias("i32x4.add"))]
     I32x4Add,
+    /// `i32x4.sub`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`.
+    #[doc(alias("i32x4.sub"))]
     I32x4Sub,
+    /// `i32x4.mul`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] * b[i]`.
+    #[doc(alias("i32x4.mul"))]
     I32x4Mul,
+    /// `i32x4.min_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as i32).min(b[i] as i32)`.
+    #[doc(alias("i32x4.min_s"))]
     S32x4Min,
+    /// `i32x4.min_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as u32).min(b[i] as u32)`.
+    #[doc(alias("i32x4.min_u"))]
     U32x4Min,
+    /// `i32x4.max_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as i32).max(b[i] as i32)`.
+    #[doc(alias("i32x4.max_s"))]
     S32x4Max,
+    /// `i32x4.max_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `(a[i] as u32).max(b[i] as u32)`.
+    #[doc(alias("i32x4.max_u"))]
     U32x4Max,
+    /// `i32x4.dot_i16x8`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Pretends `a` and `b` are each arrays of four 2D vectors, and computes
+    /// the dot product of each pair, sign extending the result.
+    #[doc(alias("i32x4.dot_i16x8"))]
     I32x4DotProductS16x8,
+    /// `i32x4.extmul_low_i16x8_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Sign extends the lower 4 lanes of `a` and `b` to 32 bits, then 
+    /// multiplies them together.
+    #[doc(alias("i32x4.extmul_low_i16x8_s"))]
     I32x4ExtMulLowS16x8,
+    /// `i32x4.extmul_low_i16x8_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Sign extends the higher 4 lanes of `a` and `b` to 32 bits, then 
+    /// multiplies them together.
+    #[doc(alias("i32x4.extmul_high_i16x8_s"))]
     I32x4ExtMulHighS16x8,
+    /// `i32x4.extmul_low_i16x8_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Extends the lower 4 lanes of `a` and `b` to 32 bits, then multiplies 
+    /// them together.
+    #[doc(alias("i32x4.extmul_low_i16x8_u"))]
     I32x4ExtMulLowU16x8,
+    /// `i32x4.extmul_low_i16x8_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Extends the higher 4 lanes of `a` and `b` to 32 bits, then multiplies 
+    /// them together.
+    #[doc(alias("i32x4.extmul_high_i16x8_u"))]
     I32x4ExtMulHighU16x8,
 
+    /// `i64x2.abs`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].abs()`
+    #[doc(alias("i64x2.abs"))]
     I64x2Abs,
+    /// `i64x2.neg`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `-a[i]`
+    #[doc(alias("i64x2.neg"))]
     I64x2Neg,
+    /// `i64x2.all_true`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Checks that both lanes are non-zero. If they are, returns 1, if not,
+    /// returns 0.
+    #[doc(alias("i64x2.all_true"))]
     I64x2AllTrue,
+    /// `i64x2.bitmask`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Returns an integer with each bit set if the corresponding lane of `a` is non-zero.
+    #[doc(alias("i64x2.bitmask"))]
     I64x2Bitmask,
+    /// `i64x2.extend_low_i16x8_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends the lower 2 lanes of `a` to 64 bits
+    #[doc(alias("i64x2.extend_low_i32x4_s"))]
     I64x2ExtendLowS32x4,
+    /// `i64x2.extend_high_i16x8_s`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Sign extends the upper 2 lanes of `a` to 64 bits
+    #[doc(alias("i64x2.extend_high_i32x4_s"))]
     I64x2ExtendHighS32x4,
+    /// `i64x2.extend_low_i16x8_u`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends the lower 2 lanes of `a` to 64 bits
+    #[doc(alias("i64x2.extend_low_i32x4_u"))]
     I64x2ExtendLowU32x4,
+    /// `i64x2.extend_high_i16x8_u`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Extends the upper 2 lanes of `a` to 64 bits
+    #[doc(alias("i64x2.extend_high_i32x4_u"))]
     I64x2ExtendHighU32x4,
+    /// `i64x2.shl`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts both lanes of `v` left by `x` bits.
+    #[doc(alias("i64x2.shl"))]
     I64x2Shl,
+    /// `i64x2.shr_s`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts both lanes of `v` right by `x` bits, signed.
+    #[doc(alias("i64x2.shr_s"))]
     S64x2Shr,
+    /// `i64x2.shr_u`. Signature: `(x: i32, v: v128) -> (v128)`
+    /// 
+    /// Shifts both lanes of `v` right by `x` bits, unsigned.
+    #[doc(alias("i64x2.shr_u"))]
     U64x2Shr,
+    /// `i64x2.add`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`.
+    #[doc(alias("i64x2.add"))]
     I64x2Add,
+    /// `i64x2.sub`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`.
+    #[doc(alias("i64x2.sub"))]
     I64x2Sub,
+    /// `i64x2.mul`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] * b[i]`.
+    #[doc(alias("i64x2.mul"))]
     I64x2Mul,
+    /// `i64x2.extmul_low_i16x8_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Sign extends the lower 2 lanes of `a` and `b` to 64 bits, then 
+    /// multiplies them together.
+    #[doc(alias("i64x2.extmul_low_i32x4_s"))]
     I64x2ExtMulLowS32x4,
+    /// `i64x2.extmul_low_i16x8_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Sign extends the higher 2 lanes of `a` and `b` to 64 bits, then 
+    /// multiplies them together.
+    #[doc(alias("i64x2.extmul_high_i32x4_s"))]
     I64x2ExtMulHighS32x4,
+    /// `i64x2.extmul_low_i16x8_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Extends the lower 2 lanes of `a` and `b` to 64 bits, then multiplies 
+    /// them together.
+    #[doc(alias("i64x2.extmul_low_i32x4_u"))]
     I64x2ExtMulLowU32x4,
+    /// `i64x2.extmul_low_i16x8_u`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Extends the higher 2 lanes of `a` and `b` to 64 bits, then multiplies 
+    /// them together.
+    #[doc(alias("i64x2.extmul_high_i32x4_u"))]
     I64x2ExtMulHighU32x4,
 
+    /// `f32x4.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` up, towards infinity.
+    #[doc(alias("f32x4.ceil"))]
     F32x4Ceil,
+    /// `f32x4.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` down, towards negative infinity.
+    #[doc(alias("f32x4.ceil"))]
     F32x4Floor,
+    /// `f32x4.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` towards zero.
+    #[doc(alias("f32x4.ceil"))]
     F32x4Trunc,
+    /// `f32x4.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` towards the nearest integer.
+    #[doc(alias("f32x4.ceil"))]
     F32x4Nearest,
+    /// `f32x4.abs`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].abs()`
+    #[doc(alias("f32x4.abs"))]
     F32x4Abs,
+    /// `f32x4.neg`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `-a[i]`
+    #[doc(alias("f32x4.neg"))]
     F32x4Neg,
+    /// `f32x4.sqrt`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a.sqrt()`
+    #[doc(alias("f32x4.sqrt"))]
     F32x4Sqrt,
+    /// `f32x4.add`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`.
+    #[doc(alias("f32x4.add"))]
     F32x4Add,
+    /// `f32x4.sub`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`.
+    #[doc(alias("f32x4.sub"))]
     F32x4Sub,
+    /// `f32x4.mul`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] * b[i]`.
+    #[doc(alias("f32x4.mul"))]
     F32x4Mul,
+    /// `f32x4.div`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] / b[i]`.
+    #[doc(alias("f32x4.div"))]
     F32x4Div,
+    /// `i32x4.min`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].min(b[i])`.
+    #[doc(alias("i32x4.min"))]
     F32x4Min,
+    /// `i32x4.max`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].max(b[i])`.
+    #[doc(alias("i32x4.max"))]
     F32x4Max,
+    /// `i32x4.min_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `if a[i] < b[i] { a[i] } else { b[i] }`.
+    #[doc(alias("i32x4.min_s"))]
     F32x4PMin,
+    /// `i32x4.max_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `if a[i] < b[i] { b[i] } else { a[i] }`.
+    #[doc(alias("i32x4.max_s"))]
     F32x4PMax,
 
+    /// `f64x2.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` up, towards infinity.
+    #[doc(alias("f6424.ceil"))]
     F64x2Ceil,
+    /// `f64x2.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` down, towards negative infinity.
+    #[doc(alias("f6424.ceil"))]
     F64x2Floor,
+    /// `f64x2.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` towards zero.
+    #[doc(alias("f6424.ceil"))]
     F64x2Trunc,
+    /// `f64x2.ceil`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Rounds each lane of `a` towards the nearest integer.
+    #[doc(alias("f6424.ceil"))]
     F64x2Nearest,
+    /// `f64x2.abs`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].abs()`
+    #[doc(alias("f6424.abs"))]
     F64x2Abs,
+    /// `f64x2.neg`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `-a[i]`
+    #[doc(alias("f6424.neg"))]
     F64x2Neg,
+    /// `f64x2.sqrt`. Signature: `(a: v128) -> (v128)`
+    /// 
+    /// Computes `a.sqrt()`
+    #[doc(alias("f6424.sqrt"))]
     F64x2Sqrt,
+    /// `f64x2.add`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] + b[i]`.
+    #[doc(alias("f6424.add"))]
     F64x2Add,
+    /// `f64x2.sub`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] - b[i]`.
+    #[doc(alias("f6424.sub"))]
     F64x2Sub,
+    /// `f64x2.mul`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] * b[i]`.
+    #[doc(alias("f6424.mul"))]
     F64x2Mul,
+    /// `f64x2.div`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i] / b[i]`.
+    #[doc(alias("f6424.div"))]
     F64x2Div,
+    /// `i64x2.min`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].min(b[i])`.
+    #[doc(alias("i6424.min"))]
     F64x2Min,
+    /// `i64x2.max`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `a[i].max(b[i])`.
+    #[doc(alias("i6424.max"))]
     F64x2Max,
+    /// `i64x2.min_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `if a[i] < b[i] { a[i] } else { b[i] }`.
+    #[doc(alias("i6424.min_s"))]
     F64x2PMin,
+    /// `i64x2.max_s`. Signature: `(b: v128, a: v128) -> (v128)`
+    /// 
+    /// Computes `if a[i] < b[i] { b[i] } else { a[i] }`.
+    #[doc(alias("i6424.max_s"))]
     F64x2PMax,
-
+    
+    /// `i32x4.trunc_sat_f32x4_s`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Computes `a[i]` rounded towards zero, as a signed integer, saturating to `i32::MAX`
+    #[doc(alias("i32x4.trunc_sat_f32x4_s"))]
     S32x4TruncSatF32x4,
+    /// `i32x4.trunc_sat_f32x4_u`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a[i]` rounded towards zero, as an unsigned integer, saturating 
+    /// to `u32::MAX`
+    #[doc(alias("i32x4.trunc_sat_f32x4_u"))]
     U32x4TruncSatF32x4,
+    /// `f32x4.convert_i32x4_s`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Computes `a[i] as i32 as f32`.
+    #[doc(alias("f32x4.convert_i32x4_s"))]
     F32x4ConvertS32x4,
+    /// `f32x4.convert_i32x4_u`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Computes `a[i] as u32 as f32`.
+    #[doc(alias("f32x4.convert_i32x4_u"))]
     F32x4ConvertU32x4,
+    /// `i32x4.trunc_sat_f64x2_s_zero`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Computes `a[i]` rounded towards zero, as a signed integer, saturating to 
+    /// `i32::MAX`. The upper two lanes are zero.
+    #[doc(alias("i32x4.trunc_sat_f64x2_s_zero"))]
     S32x4TruncSatZeroF64x2,
+    /// `i32x4.trunc_sat_f64x2_u_zero`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Returns `a[i]` rounded towards zero, as an unsigned integer, saturating 
+    /// to `u32::MAX`. The upper two lanes are zero.
+    #[doc(alias("i32x4.trunc_sat_f64x2_u_zero"))]
     U32x4TruncSatZeroF64x2,
+    /// `f64x2.convert_low_i32x4_s`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Computes `a[i] as i32 as f64` for the lower two lanes.
+    #[doc(alias("f64x2.convert_low_i32x4_s"))]
     F64x2ConvertLowS32x4,
+    /// `f64x2.convert_low_i32x4_u`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Computes `a[i] as u32 as f64` for the lower two lanes.
+    #[doc(alias("f64x2.convert_low_i32x4_u"))]
     F64x2ConvertLowU32x4,
+    /// `f32x4.demote_f64x2_zero`. Signature: `(a: f32) -> (i32)`
+    /// 
+    /// Computes `a[i] as f32`. The upper two lanes are zero.
+    #[doc(alias("f32x4.demote_f64x2_zero"))]
     F32x4DemoteF64x2Zero,
+    /// `f64x2.promote_low_f32x4`. Signature: `(a: i32) -> (f32)`
+    /// 
+    /// Computes `a[i] as f64` for the lower two lanes.
+    #[doc(alias("f64x2.promote_low_f32x4"))]
     F64x2PromoteLowF32x4,
 }
 

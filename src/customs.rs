@@ -1,8 +1,11 @@
+//! Customs sections are named series of arbitrary bytes, often used for debug info.
+
 use crate::{
     encode::{Buf, ErrorKind, WasmDecode},
     WasmEncode,
 };
 
+/// A section containing arbitrary bytes.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct CustomSection {
     pub name: String,
@@ -28,6 +31,24 @@ impl WasmDecode for CustomSection {
     }
 }
 
+/// A custom section that defines debug names for the module, functions, and
+/// local variables.
+/// 
+/// # Example
+/// 
+/// ```
+/// # use wabam::{Module, customs::NameSection};
+/// # let mut module = Module::default();
+/// // ...continuing from `add.wasm` example from `Module`'s docs
+/// 
+/// let names = NameSection {
+///     module_name: Some("add module".into()),
+///     function_names: vec![(0, "add".into())],
+///     local_names: vec![],
+/// };
+/// 
+/// module.custom_sections.push(names.to_custom());
+/// ```
 pub struct NameSection {
     pub module_name: Option<String>,
     pub function_names: Vec<(u32, String)>,
