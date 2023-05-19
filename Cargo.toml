@@ -1,8 +1,12 @@
 [package]
 name = "wabam"
+description = "WebAssembly Builder and Assembler of Modules: WABAM"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Cyborus04/wabam"
+categories = ["wasm"]
+keywords = ["wasm", "webassembly", "assemble", "disassemble"]
+exclude = ["tests/*",]
 
 [dependencies]
