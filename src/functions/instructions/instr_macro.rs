@@ -36,7 +36,7 @@ macro_rules! instr_impl {
     (else) => { $crate::I::Else };
     (end) => { $crate::I::End };
     (br $x:tt) => { $crate::I::Branch($crate::ml!($x)) };
-    (br_if $x:tt) => { $crate::I::BranchIf(depth: $crate::ml!($x)) };
+    (br_if $x:tt) => { $crate::I::BranchIf($crate::ml!($x)) };
     (br_table $($x:tt)+) => {
         {
             let a = [$($crate::ml!($x)),*];
