@@ -54,6 +54,12 @@ impl From<Vec<Instruction>> for Expr {
     }
 }
 
+impl<const N: usize> From<[Instruction; N]> for Expr {
+    fn from(value: [Instruction; N]) -> Self {
+        Self { instructions: value.into() }
+    }
+}
+
 impl From<Instruction> for Expr {
     fn from(instr: Instruction) -> Self {
         Self {

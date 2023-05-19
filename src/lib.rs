@@ -54,7 +54,7 @@
 //!     (call 0) // imported functions are at the start of the address space
 //!     // this current function would be 1 (this is important later!)
 //!     (drop) // Ignore the error, this is just an example after all!
-//! ).to_vec(); // `instrs!` returns an array, convert to a `Vec`.  
+//! );
 //! 
 //! let func = wabam::functions::Function {
 //!     type_idx: 0, // types[0], see above
@@ -188,7 +188,7 @@ const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 ///     (local.get 0)
 ///     (local.get 1)
 ///     (i32.add)
-/// ).to_vec().into();
+/// ).into();
 /// 
 /// let func = Function {
 ///     type_idx: 0,
