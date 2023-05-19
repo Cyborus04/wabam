@@ -27,7 +27,7 @@ macro_rules! instr_impl {
     (block) => { $crate::I::Block(None) };
     (block (result $t:tt)) => { $crate::I::Block($crate::mlto!($t))};
 
-    (loop) => { $crate::I::Loop(kind) };
+    (loop) => { $crate::I::Loop(None) };
     (loop (result $t:tt)) => { $crate::I::Loop($crate::mlto!($t))};
 
     (if) => { $crate::I::If(None)};
@@ -35,8 +35,8 @@ macro_rules! instr_impl {
 
     (else) => { $crate::I::Else };
     (end) => { $crate::I::End };
-    (br $x:tt) => { $crate::I::Branch { depth: $crate::ml!($x) } };
-    (br_if $x:tt) => { $crate::I::BranchIf { depth: $crate::ml!($x) } };
+    (br $x:tt) => { $crate::I::Branch($crate::ml!($x)) };
+    (br_if $x:tt) => { $crate::I::BranchIf(depth: $crate::ml!($x)) };
     (br_table $($x:tt)+) => {
         {
             let a = [$($crate::ml!($x)),*];
