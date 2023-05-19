@@ -1,3 +1,7 @@
+[![Crates.io](https://img.shields.io/crates/v/wabam?style=flat-square)](https://crates.io/crates/wabam)
+[![docs.rs](https://img.shields.io/docsrs/wabam?style=flat-square)](https://docs.rs/wabam/)
+[![GitHub Repo stars](https://img.shields.io/github/stars/Cyborus04/wabam?style=social)](https://github.com/Cyborus04/wabam)
+
 # wabam
 
 A crate for creating WebAssembly modules.
