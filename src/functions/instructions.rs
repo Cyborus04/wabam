@@ -3350,9 +3350,7 @@ impl WasmEncode for Instruction {
                 ref depths,
                 failsafe,
             } => {
-                for depth in depths {
-                    depth.encode(v);
-                }
+                depths.encode(v);
                 failsafe.encode(v);
             }
             Call(func_idx) => {
