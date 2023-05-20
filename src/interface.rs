@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// A function, table, memory, or global requested from the host environment.
-/// 
+///
 /// They are required to be supplied for instantiation to succeed.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Import {
@@ -38,7 +38,7 @@ impl WasmDecode for Import {
 }
 
 /// The signature of an import
-/// 
+///
 /// - A function's type signature index.
 /// - A table's type.
 /// - A memory's size.
@@ -107,7 +107,7 @@ impl WasmDecode for ImportDesc {
 }
 
 /// A module's internal resource that is exported to the host environment.
-/// 
+///
 /// The name must be unique within the module.
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Export {

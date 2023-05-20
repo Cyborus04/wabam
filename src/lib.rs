@@ -1,15 +1,15 @@
 //! A crate for creating WebAssembly modules.
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```
 //! let mut module = wabam::Module::default();
-//! 
+//!
 //! module.types = vec![
 //!     wabam::func_type!((param) (result)),
 //!     wabam::func_type!((param i32 i32 i32 i32) (result i32)),
 //! ];
-//! 
+//!
 //! // Import WASI's `fd_write`, to print to the terminal
 //! let fd_write = wabam::interface::Import {
 //!     module: "wasi_snapshot_preview1".into(),
@@ -19,17 +19,17 @@
 //!     }
 //! };
 //! module.imports.push(fd_write);
-//! 
+//!
 //! // Define memory
 //! let memory = wabam::Limit {
 //!     start: 1,
 //!     end: None,
 //! };
 //! module.memories.push(memory);
-//! 
+//!
 //! let text = "Hello, wasm!";
 //! let text_ptr = 12;
-//! 
+//!
 //! // Load the text into memory
 //! let data = wabam::Data::Active {
 //!     mem_index: 0,
@@ -37,16 +37,16 @@
 //!     data: text.into(),
 //! };
 //! module.datas.push(data);
-//! 
+//!
 //! let body = wabam::instrs!(
 //!     (i32.const 0) // Where the `(ptr, len)` pair is
 //!     (i32.const { text_ptr })
 //!     (i32.store) // Write ptr
 //!     
 //!     (i32.const 0) // Where the `(ptr, len)` pair is
-//!     (i32.const { text.len() as i32 }) 
+//!     (i32.const { text.len() as i32 })
 //!     (i32.store offset=4) // Write len
-//! 
+//!
 //!     (i32.const 1) // File descriptor, stdout is 1.
 //!     (i32.const 0) // Where the `(ptr, len)` pair is
 //!     (i32.const 1) // How many `(ptr, len)` pairs there are
@@ -55,14 +55,14 @@
 //!     // this current function would be 1 (this is important later!)
 //!     (drop) // Ignore the error, this is just an example after all!
 //! );
-//! 
+//!
 //! let func = wabam::functions::Function {
 //!     type_idx: 0, // types[0], see above
 //!     locals: vec![], // no local variables
 //!     body: body.into(),
 //! };
 //! module.functions.push(func);
-//! 
+//!
 //! // Export the start function
 //! let func_export = wabam::interface::Export {
 //!     name: "_start".into(),
@@ -70,7 +70,7 @@
 //!         func_idx: 1, // this is where that's important
 //!     }
 //! };
-//! 
+//!
 //! // Export memory
 //! let mem_export = wabam::interface::Export {
 //!     name: "memory".into(),
@@ -80,9 +80,9 @@
 //! };
 //! module.exports.push(func_export);
 //! module.exports.push(mem_export);
-//! 
+//!
 //! let output = module.build();
-//! 
+//!
 //! # mod std {
 //! #    pub mod fs {
 //! #        pub fn write(_s: &str, _d: &[u8]) -> Result<(), ()> { Ok(()) }
@@ -91,9 +91,9 @@
 //! std::fs::write("./hello.wasm", &output).unwrap();
 //! # ::std::fs::write("./src/tests/hello.wasm", &output).unwrap();
 //! ```
-//! 
+//!
 //! Then run it:
-//! 
+//!
 //! ```txt
 //! $ wasmtime ./hello.wasm
 //! Hello, wasm!
@@ -121,15 +121,15 @@ pub use encode::ErrorKind;
 /// ```
 /// # use wabam::{Module, ErrorKind};
 /// let bytes = [1, 2, 3, 4, 5, 6, 7, 8];
-/// 
+///
 /// let err = Module::load(&bytes).unwrap_err();
 /// assert_eq!(err.kind(), &ErrorKind::BadHeader(bytes));
 /// ```
-/// 
+///
 /// ```
 /// # use wabam::{Module, ErrorKind};
 /// let bytes = [1, 2, 3, 4, 5];
-/// 
+///
 /// let err = Module::load(&bytes).unwrap_err();
 /// assert_eq!(err.kind(), &ErrorKind::TooShort);
 /// ```
@@ -153,7 +153,11 @@ impl Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "wasm parsing failed at {:#08X}: {}", self.offset, self.error)
+        write!(
+            f,
+            "wasm parsing failed at {:#08X}: {}",
+            self.offset, self.error
+        )
     }
 }
 
@@ -165,38 +169,38 @@ pub use functions::Instruction as I;
 const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 
 /// A WebAssembly module
-/// 
+///
 /// # Building from scratch
-/// 
+///
 /// A module can be created by starting with an empty via `Module::default`, then
 /// adding components by modified struct fields.
-/// 
-/// When the module is finished, it can be assembled into a WebAssembly binary 
+///
+/// When the module is finished, it can be assembled into a WebAssembly binary
 /// file format with `Module::build`.
-/// 
+///
 /// ## Example
 /// Creating a simple `add.wasm`
-/// 
+///
 /// ```
 /// # use wabam::{func_type, instrs, interface::{Export, ExportDesc}, functions::Function, Module};
 /// let mut module = Module::default();
-/// 
+///
 /// let fn_type = func_type!((param i32 i32) (result i32));
 /// module.types.push(fn_type);
-/// 
+///
 /// let body = instrs!(
 ///     (local.get 0)
 ///     (local.get 1)
 ///     (i32.add)
 /// ).into();
-/// 
+///
 /// let func = Function {
 ///     type_idx: 0,
 ///     locals: vec![],
 ///     body,
 /// };
 /// module.functions.push(func);
-/// 
+///
 /// let export = Export {
 ///     name: "add".into(),
 ///     desc: ExportDesc::Func {
@@ -204,9 +208,9 @@ const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 ///     }
 /// };
 /// module.exports.push(export);
-/// 
+///
 /// let wasm = module.build();
-/// 
+///
 /// # mod std {
 /// #    pub mod fs {
 /// #        pub fn write(_s: &str, _d: &[u8]) -> Result<(), ()> { Ok(()) }
@@ -215,14 +219,14 @@ const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 /// std::fs::write("./add.wasm", &wasm).unwrap();
 /// # ::std::fs::write("./src/tests/add.wasm", &wasm).unwrap();
 /// ```
-/// 
+///
 /// # Loading modules
-/// 
+///
 /// Modules can be loaded from the WebAssembly binary format with `Module::load`,
 /// then modified or read from as usual.
-/// 
+///
 /// ## Example
-/// 
+///
 /// ```
 /// # use wabam::Module;
 /// # mod std {
@@ -233,7 +237,7 @@ const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 /// let bytes = std::fs::read("./add.wasm").unwrap();
 /// # let bytes = ::std::fs::read("./src/tests/add.wasm").unwrap();
 /// let module = Module::load(&bytes).unwrap();
-/// 
+///
 /// assert_eq!(module.functions.len(), 1);
 /// assert_eq!(module.exports[0].name, "add");
 /// ```
@@ -313,7 +317,9 @@ impl Module {
                 .map_err(|e| e.at(buf))?;
             let mut section = Buf::with_consumed(section_bytes, section_start);
             match section_id {
-                0 => module.custom_sections.push(load_section::<CustomSection>(section)?),
+                0 => module
+                    .custom_sections
+                    .push(load_section::<CustomSection>(section)?),
                 1 => module.types = load_section::<Vec<FuncType>>(section)?,
                 2 => module.imports = load_section::<Vec<Import>>(section)?,
                 3 => functions = Some(section),
@@ -336,7 +342,8 @@ impl Module {
             (None, Some(_)) => return Err(ErrorKind::FuncWithoutCode.at(buf)),
             (Some(_), None) => return Err(ErrorKind::CodeWithoutFunc.at(buf)),
             (Some(mut functions), Some(mut code)) => {
-                module.functions = Function::decode(&mut functions, &mut code).map_err(|e| e.at(buf))?
+                module.functions =
+                    Function::decode(&mut functions, &mut code).map_err(|e| e.at(buf))?
             }
         }
 
@@ -535,10 +542,10 @@ impl WasmDecode for Global {
 }
 
 /// A series of bytes to be loaded into linear memory
-/// 
+///
 /// Linear memory is initialized to all zeroes, these are used to load data into it.
-/// 
-/// Active data segments are loaded at instantiation-time, while passive 
+///
+/// Active data segments are loaded at instantiation-time, while passive
 /// segments are loaded at run-time using the `memory.init` instruction.
 #[derive(PartialEq, Debug, Clone)]
 pub enum Data {

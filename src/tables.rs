@@ -32,15 +32,15 @@ impl WasmDecode for TableType {
 }
 
 /// A series of references to be loaded into a table.
-/// 
-/// All tables are filled with null references at first. Element segments are 
+///
+/// All tables are filled with null references at first. Element segments are
 /// used to initialize them, like how [`Data`](crate::Data)s initialize linear memory.
-/// 
-/// Active element segments are loaded at instantiation-time, while passive 
+///
+/// Active element segments are loaded at instantiation-time, while passive
 /// segments are loaded at run-time using the [`table.init`](crate::functions::Instruction::TableInit) instruction.
-/// 
+///
 /// Declarative segments are special, they are not loaded into a table. Instead,
-/// they are used to pre-declare what references can be formed with the 
+/// they are used to pre-declare what references can be formed with the
 /// [`ref.func`](crate::functions::Instruction::RefFunc) instruction.
 #[derive(PartialEq, Debug, Clone)]
 pub struct Element {
@@ -86,7 +86,7 @@ pub enum ElemMode {
     Active { table_idx: u32, offset: Expr },
     /// Load at runtime, with [`table.init`](crate::functions::Instruction::TableInit)
     Passive,
-    /// Don't load, but declare what references can be made with 
+    /// Don't load, but declare what references can be made with
     /// [`ref.func`](crate::functions::Instruction::RefFunc)
     Declarative,
 }
