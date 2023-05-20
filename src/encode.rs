@@ -201,7 +201,7 @@ impl WasmEncode for u64 {
             let byte = x as u8 & 0x7f;
             x = x.wrapping_shr(7);
 
-            if x == 0 && byte & 0x40 == 0 {
+            if x == 0 {
                 v.push(byte);
                 break;
             } else {
@@ -235,7 +235,7 @@ impl WasmEncode for i64 {
             let byte = x as u8 & 0x7f;
             x = x.wrapping_shr(7);
 
-            if x == 0 && byte & 0x40 == 0 {
+            if (x == 0 && byte & 0x40 == 0) || (x == -1 && byte & 0x40 != 0) {
                 v.push(byte);
                 break;
             } else {
@@ -466,10 +466,10 @@ impl WasmDecode for i32 {
             let b = u8::decode(buf)?;
             out |= ((b & 0x7F) as u32).wrapping_shl(i * 7);
             if b & 0x80 == 0 {
-                let x = if b & 0x40 == 0 {
-                    out
+                let x = if b & 0x40 != 0 && ((i + 1) * 7) < 32 {
+                    out | (u32::MAX.wrapping_shl((i + 1) * 7))
                 } else {
-                    out | (u32::MAX.wrapping_shl(i * 7))
+                    out
                 };
                 return Ok(x as i32);
             }
@@ -498,11 +498,12 @@ impl WasmDecode for i64 {
         for i in 0..10 {
             let b = u8::decode(buf)?;
             out |= ((b & 0x7F) as u64).wrapping_shl(i * 7);
+
             if b & 0x80 == 0 {
-                let x = if b & 0x40 == 0 {
-                    out
+                let x = if b & 0x40 != 0 && ((i + 1) * 7) < 64 {
+                    out | (u64::MAX.wrapping_shl((i + 1) * 7))
                 } else {
-                    out | (u64::MAX.wrapping_shl(i * 7))
+                    out
                 };
                 return Ok(x as i64);
             }
@@ -539,4 +540,23 @@ impl WasmDecode for String {
         let s = String::from_utf8(Vec::<u8>::decode(buf)?)?;
         Ok(s)
     }
+}
+
+#[test]
+fn integer_round_trip() {
+    let mut v = Vec::new();
+    
+    1i32.encode(&mut v);
+    1000i32.encode(&mut v);
+    1_000_000i32.encode(&mut v);
+    (-1i32).encode(&mut v);
+    (-25i32).encode(&mut v);
+    
+    let mut buf = Buf::new(&v);
+
+    assert_eq!(i32::decode(&mut buf), Ok(1i32));
+    assert_eq!(i32::decode(&mut buf), Ok(1000i32));
+    assert_eq!(i32::decode(&mut buf), Ok(1_000_000i32));
+    assert_eq!(i32::decode(&mut buf), Ok(-1i32));
+    assert_eq!(i32::decode(&mut buf), Ok(-25i32));
 }
