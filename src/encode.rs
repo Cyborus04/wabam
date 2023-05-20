@@ -356,6 +356,8 @@ pub enum ErrorKind {
     InvalidDiscriminant(u8),
     /// Unknown instruction found
     InvalidInstruction(u8, Option<u32>),
+    /// Memory index other than 0 was used
+    MemIndexOutOfBounds(u32),
 }
 
 impl ErrorKind {
@@ -388,6 +390,7 @@ impl std::fmt::Display for ErrorKind {
                     None => write!(f, "{x:#02X} is not a valid instruction"),
                 }
             },
+            ErrorKind::MemIndexOutOfBounds(idx) => write!(f, "memory idx {idx} is greater than zero"),
         }
     }
 }
