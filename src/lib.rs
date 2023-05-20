@@ -502,8 +502,8 @@ impl WasmEncode for GlobalType {
 
 impl WasmDecode for GlobalType {
     fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
-        let mutable = bool::decode(buf)?;
         let vtype = ValType::decode(buf)?;
+        let mutable = bool::decode(buf)?;
         Ok(Self { mutable, vtype })
     }
 }
