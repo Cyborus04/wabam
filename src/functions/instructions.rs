@@ -3635,8 +3635,20 @@ impl WasmDecode for Instruction {
                 align: u32::decode(buf)?,
                 offset: u32::decode(buf)?,
             },
-            Single(0x3F) => MemorySize,
-            Single(0x40) => MemoryGrow,
+            Single(0x3F) => {
+                let mem_idx = u32::decode(buf)?;
+                if mem_idx != 0 {
+                    return Err(crate::ErrorKind::MemIndexOutOfBounds(mem_idx));
+                }
+                MemorySize
+            },
+            Single(0x40) => {
+                let mem_idx = u32::decode(buf)?;
+                if mem_idx != 0 {
+                    return Err(crate::ErrorKind::MemIndexOutOfBounds(mem_idx));
+                }
+                MemoryGrow
+            },
             Extended(0xFC, 8) => MemoryInit(u32::decode(buf)?),
             Extended(0x40, 9) => DataDrop(u32::decode(buf)?),
             Extended(0xFC, 10) => MemoryCopy,
