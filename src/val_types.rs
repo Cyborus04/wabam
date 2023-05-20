@@ -1,11 +1,10 @@
 use crate::encode::{Buf, ErrorKind, WasmDecode, WasmEncode};
 
-
-/// The type of a value in a function signature, global or local variable, or 
+/// The type of a value in a function signature, global or local variable, or
 /// the stack.
-/// 
-/// The corresponding types in Rust are as follows: 
-/// 
+///
+/// The corresponding types in Rust are as follows:
+///
 /// | WebAssembly | Rust | Description
 /// |-|-|-|
 /// |`i32`| `i32` and `u32` | 32 bits, without a sign. |
@@ -121,7 +120,7 @@ impl Ord for ValType {
 }
 
 /// The type of a reference value.
-/// 
+///
 /// See [`ValType`] for more info.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RefType {
@@ -161,7 +160,7 @@ impl WasmDecode for RefType {
 }
 
 /// The type of a numeric value.
-/// 
+///
 /// See [`ValType`] for more info.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NumType {
@@ -200,7 +199,7 @@ impl NumType {
 }
 
 /// The type of a SIMD vector value.
-/// 
+///
 /// See [`ValType`] for more info.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VecType {
