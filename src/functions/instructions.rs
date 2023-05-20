@@ -70,6 +70,63 @@ impl From<Instruction> for Expr {
     }
 }
 
+/// Alignment and offset immediates for memory access instructions, i.e. [`i32.load`](Instruction::I32Load)
+/// 
+/// `align` is `log2` of the desired alignment. So, for an 8-byte alignment, 
+/// `align` should be set to 3.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MemArg {
+    pub align: u32,
+    pub offset: u32,
+}
+
+impl MemArg {
+    /// Create a new `MemArg` with 1-byte alignment, suitable for an 8 bit integer
+    pub fn new_8(offset: u32) -> Self {
+        Self { align: 0, offset }
+    }
+
+    /// Create a new `MemArg` with 2-byte alignment, suitable for a 16 bit integer
+    pub fn new_16(offset: u32) -> Self {
+        Self { align: 1, offset }
+    }
+
+    /// Create a new `MemArg` with 4-byte alignment, suitable for a 32 bit integer
+    pub fn new_32(offset: u32) -> Self {
+        Self { align: 2, offset }
+    }
+
+    /// Create a new `MemArg` with 8-byte alignment, suitable for a 64 bit integer
+    pub fn new_64(offset: u32) -> Self {
+        Self { align: 3, offset }
+    }
+
+    /// Create a new `MemArg` with 16-byte alignment, suitable for a 128 bit 
+    /// integer or `v128` vector.
+    pub fn new_128(offset: u32) -> Self {
+        Self { align: 4, offset }
+    }
+}
+
+impl WasmEncode for MemArg {
+    fn size(&self) -> usize {
+        (self.align, self.offset).size()
+    }
+
+    fn encode(&self, v: &mut Vec<u8>) {
+        (self.align, self.offset).encode(v);
+    }
+}
+
+impl WasmDecode for MemArg {
+    fn decode(buf: &mut crate::encode::Buf<'_>) -> Result<Self, crate::ErrorKind> {
+        Ok(Self {
+            align: u32::decode(buf)?,
+            offset: u32::decode(buf)?,
+        })
+    }
+}
+
 /// The core of it all, a single instruction.
 ///
 /// Each variant has its own documentation.
@@ -270,126 +327,126 @@ pub enum Instruction {
     ///
     /// Loads an `i32` from linear memory at `ptr + offset`.
     #[doc(alias("i32.load"))]
-    I32Load { align: u32, offset: u32 },
+    I32Load(MemArg),
     /// `i64.load`. Signature: `(ptr: i32) -> (i64)`
     ///
     /// Loads an `i64` from linear memory at `ptr + offset`.
     #[doc(alias("i64.load"))]
-    I64Load { align: u32, offset: u32 },
+    I64Load(MemArg),
     /// `f32.load`. Signature: `(ptr: i32) -> (f32)`
     ///
     /// Loads an `f32` from linear memory at `ptr + offset`.
     #[doc(alias("f32.load"))]
-    F32Load { align: u32, offset: u32 },
+    F32Load(MemArg),
     /// `f64.load`. Signature: `(ptr: i32) -> (f64)`
     ///
     /// Loads an `f64` from linear memory at `ptr + offset`.
     #[doc(alias("f64.load"))]
-    F64Load { align: u32, offset: u32 },
+    F64Load(MemArg),
 
     /// `i32.load8_s`. Signature: `(ptr: i32) -> (i32)`
     ///
     /// Loads a `u8` from linear memory at `ptr + offset` and sign extends it to
     /// 32 bits.
     #[doc(alias("i32.load8_s"))]
-    I32LoadS8 { align: u32, offset: u32 },
+    I32LoadS8(MemArg),
     /// `i32.load8_u`. Signature: `(ptr: i32) -> (i32)`
     ///
     /// Loads a `u8` from linear memory at `ptr + offset` and extends it to 32 bits.
     #[doc(alias("i32.load8_u"))]
-    I32LoadU8 { align: u32, offset: u32 },
+    I32LoadU8(MemArg),
     /// `i32.load16_s`. Signature: `(ptr: i32) -> (i32)`
     ///
     /// Loads a `u16` from linear memory at `ptr + offset` and sign extends it
     /// to 32 bits.
     #[doc(alias("i32.load16_s"))]
-    I32LoadS16 { align: u32, offset: u32 },
+    I32LoadS16(MemArg),
     /// `i32.load16_u`. Signature: `(ptr: i32) -> (i32)`
     ///
     /// Loads a `u16` from linear memory at `ptr + offset` and extends it to 32 bits.
     #[doc(alias("i32.load16_u"))]
-    I32LoadU16 { align: u32, offset: u32 },
+    I32LoadU16(MemArg),
 
     /// `i64.load8_s`. Signature: `(i32) -> (i64)`
     ///
     /// Loads a `u8` from linear memory at `ptr + offset` and sign extends it to
     /// 64 bits.
     #[doc(alias("i64.load8_s"))]
-    I64LoadS8 { align: u32, offset: u32 },
+    I64LoadS8(MemArg),
     /// `i64.load8_u`. Signature: `(i32) -> (i64)`
     ///
     /// Loads a `u8` from linear memory at `ptr + offset` and extends it to 64 bits.
     #[doc(alias("i64.load8_u"))]
-    I64LoadU8 { align: u32, offset: u32 },
+    I64LoadU8(MemArg),
     /// `i64.load16_s`. Signature: `(i32) -> (i64)`
     ///
     /// Loads a `u16` from linear memory at `ptr + offset` and sign extends it
     /// to 64 bits.
     #[doc(alias("i64.load16_s"))]
-    I64LoadS16 { align: u32, offset: u32 },
+    I64LoadS16(MemArg),
     /// `i64.load16_u`. Signature: `(i32) -> (i64)`
     ///
     /// Loads a `u16` from linear memory at `ptr + offset` and extends it to 64 bits.
     #[doc(alias("i64.load16_u"))]
-    I64LoadU16 { align: u32, offset: u32 },
+    I64LoadU16(MemArg),
     /// `i64.load32_s`. Signature: `(i32) -> (i64)`
     ///
     /// Loads a `u32` from linear memory at `ptr + offset` and sign extends it
     /// to 64 bits.
     #[doc(alias("i64.load32_s"))]
-    I64LoadS32 { align: u32, offset: u32 },
+    I64LoadS32(MemArg),
     /// `i64.load32_u`. Signature: `(i32) -> (i64)`
     ///
     /// Loads a `u32` from linear memory at `ptr + offset` and extends it to 64 bits.
     #[doc(alias("i64.load32_u"))]
-    I64LoadU32 { align: u32, offset: u32 },
+    I64LoadU32(MemArg),
 
     /// `i32.store`. Signature: `(val: i32, ptr: i32) -> ()`
     ///
     /// Writes `val` to linear memory at `ptr + offset`.
     #[doc(alias("i32.store"))]
-    I32Store { align: u32, offset: u32 },
+    I32Store(MemArg),
     /// `i64.store`. Signature: `(val: i64, ptr: i32) -> ()`
     ///
     /// Writes `val` to linear memory at `ptr + offset`.
     #[doc(alias("i64.store"))]
-    I64Store { align: u32, offset: u32 },
+    I64Store(MemArg),
     /// `f32.store`. Signature: `(val: f32, ptr: i32) -> ()`
     ///
     /// Writes `val` to linear memory at `ptr + offset`.
     #[doc(alias("f32.store"))]
-    F32Store { align: u32, offset: u32 },
+    F32Store(MemArg),
     /// `f64.store`. Signature: `(val: f64, ptr: i32) -> ()`
     ///
     /// Writes `val` to linear memory at `ptr + offset`.
     #[doc(alias("f64.store"))]
-    F64Store { align: u32, offset: u32 },
+    F64Store(MemArg),
 
     /// `i32.store8`. Signature: `(val: i32, ptr: i32) -> ()`
     ///
     /// Writes the lower 8 bits of `val` to linear memory at `ptr + offset`.
     #[doc(alias("i32.store8"))]
-    I32StoreI8 { align: u32, offset: u32 },
+    I32StoreI8(MemArg),
     /// `i32.store16`. Signature: `(val: i32, ptr: i32) -> ()`
     ///
     /// Writes the lower 16 bits of `val` to linear memory at `ptr + offset`.
     #[doc(alias("i32.store16"))]
-    I32StoreI16 { align: u32, offset: u32 },
+    I32StoreI16(MemArg),
     /// `i64.store8`. Signature: `(val: i64, ptr: i32) -> ()`
     ///
     /// Writes the lower 8 bits of `val` to linear memory at `ptr + offset`.
     #[doc(alias("i64.store8"))]
-    I64StoreI8 { align: u32, offset: u32 },
+    I64StoreI8(MemArg),
     /// `i64.store16`. Signature: `(val: i64, ptr: i32) -> ()`
     ///
     /// Writes the lower 16 bits of `val` to linear memory at `ptr + offset`.
     #[doc(alias("i64.store16"))]
-    I64StoreI16 { align: u32, offset: u32 },
+    I64StoreI16(MemArg),
     /// `i64.store32`. Signature: `(val: i64, ptr: i32) -> ()`
     ///
     /// Writes the lower 32 bits of `val` to linear memory at `ptr + offset`.
     #[doc(alias("i64.store32"))]
-    I64StoreI32 { align: u32, offset: u32 },
+    I64StoreI32(MemArg),
 
     /// `memory.size`. Signature: `() -> (i32)`
     ///
@@ -1140,128 +1197,128 @@ pub enum Instruction {
     ///
     /// Loads a `v128` from linear memory at `ptr + offset`.
     #[doc(alias("v128.load"))]
-    V128Load { align: u32, offset: u32 },
+    V128Load(MemArg),
     /// `v128.load8x8_s`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads 8 contiguous 8-bit values from linear memory at `ptr`, sign
     /// extends them to 16 bits, then puts those in the lanes of an `i16x8`.
     #[doc(alias("v128.load8x8_s"))]
-    V128LoadS8x8 { align: u32, offset: u32 },
+    V128LoadS8x8(MemArg),
     /// `v128.load8x8_u`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads 8 contiguous 8-bit values from linear memory at `ptr`, extends
     /// them to 16 bits, then puts those in the lanes of an `i16x8`.
     #[doc(alias("v128.load8x8_u"))]
-    V128LoadU8x8 { align: u32, offset: u32 },
+    V128LoadU8x8(MemArg),
     /// `v128.load16x4_s`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads 4 contiguous 16-bit values from linear memory at `ptr`, sign
     /// extends them to 32 bits, then puts those in the lanes of an `i32x4`.
     #[doc(alias("v128.load16x4_s"))]
-    V128LoadS16x4 { align: u32, offset: u32 },
+    V128LoadS16x4(MemArg),
     /// `v128.load16x4_u`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads 4 contiguous 32-bit values from linear memory at `ptr`, extends
     /// them to 32 bits, then puts those in the lanes of an `i32x4`.
     #[doc(alias("v128.load16x4_u"))]
-    V128LoadU16x4 { align: u32, offset: u32 },
+    V128LoadU16x4(MemArg),
     /// `v128.load32x2_s`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads 2 contiguous 32-bit values from linear memory at `ptr`, sign
     /// extends them to 64 bits, then puts those in the lanes of an `i64x2`.
     #[doc(alias("v128.load32x2_s"))]
-    V128LoadS32x2 { align: u32, offset: u32 },
+    V128LoadS32x2(MemArg),
     /// `v128.load32x2_u`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads 2 contiguous 32-bit values from linear memory at `ptr`, extends
     /// them to 64 bits, then puts those in the lanes of an `i64x2`.
     #[doc(alias("v128.load32x2_u"))]
-    V128LoadU32x2 { align: u32, offset: u32 },
+    V128LoadU32x2(MemArg),
     /// `v128.load8_splat`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads an 8-bit value from linear memory at `ptr`, and copies it into
     /// every lane of an `i8x16`.
     #[doc(alias("v128.load8_splat"))]
-    V128LoadSplatI8 { align: u32, offset: u32 },
+    V128LoadSplatI8(MemArg),
     /// `v128.load16_splat`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads a 16-bit value from linear memory at `ptr`, and copies it into
     /// every lane of an `i16x8`.
     #[doc(alias("v128.load16_splat"))]
-    V128LoadSplatI16 { align: u32, offset: u32 },
+    V128LoadSplatI16(MemArg),
     /// `v128.load32_splat`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads a 32-bit value from linear memory at `ptr`, and copies it into
     /// every lane of an `i32x4`.
     #[doc(alias("v128.load32_splat"))]
-    V128LoadSplatI32 { align: u32, offset: u32 },
+    V128LoadSplatI32(MemArg),
     /// `v128.load64_splat`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads a 64-bit value from linear memory at `ptr`, and copies it into
     /// both lanes of an `i64x2`.
     #[doc(alias("v128.load64_splat"))]
-    V128LoadSplatI64 { align: u32, offset: u32 },
+    V128LoadSplatI64(MemArg),
     /// `v128.load32_zero`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads a 32-bit value from linear memory at `ptr`, and puts it into the
     /// first lane of an `i32x4`. Every other lane is zero.
     #[doc(alias("v128.load32_zero"))]
-    V128LoadZeroI32 { align: u32, offset: u32 },
+    V128LoadZeroI32(MemArg),
     /// `v128.load64_zero`. Signature: `(ptr: i32) -> (v128)`
     ///
     /// Loads a 64-bit value from linear memory at `ptr`, and puts it into the
     /// first lane of an `i64x2`. The other lane is zero.
     #[doc(alias("v128.load64_zero"))]
-    V128LoadZeroI64 { align: u32, offset: u32 },
+    V128LoadZeroI64(MemArg),
     /// `v128.store`. Signature: `(vec: v128, ptr: i32) -> ()`
     ///
     /// Stores `vec` into linear memoery at `ptr`.
     #[doc(alias("v128.store"))]
-    V128Store { align: u32, offset: u32 },
+    V128Store(MemArg),
     /// `v128.load8_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
     ///
     /// Loads an 8-bit value from linear memory at `ptr`, and puts it into the
     /// specified lane of `vec`.
     #[doc(alias("v128.load8_lane"))]
-    V128Load8Lane { align: u32, offset: u32, lane: u8 },
+    V128Load8Lane { memarg: MemArg, lane: u8 },
     /// `v128.load16_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
     ///
     /// Loads an 16-bit value from linear memory at `ptr`, and puts it into the
     /// specified lane of `vec`.
     #[doc(alias("v128.load16_lane"))]
-    V128Load16Lane { align: u32, offset: u32, lane: u8 },
+    V128Load16Lane { memarg: MemArg, lane: u8 },
     /// `v128.load32_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
     ///
     /// Loads an 32-bit value from linear memory at `ptr`, and puts it into the
     /// specified lane of `vec`.
     #[doc(alias("v128.load32_lane"))]
-    V128Load32Lane { align: u32, offset: u32, lane: u8 },
+    V128Load32Lane { memarg: MemArg, lane: u8 },
     /// `v128.load64_lane`. Signature: `(vec: v128, ptr: i32) -> (v128)`
     ///
     /// Loads an 64-bit value from linear memory at `ptr`, and puts it into the
     /// specified lane of `vec`.
     #[doc(alias("v128.load64_lane"))]
-    V128Load64Lane { align: u32, offset: u32, lane: u8 },
+    V128Load64Lane { memarg: MemArg, lane: u8 },
     /// `v128.store8_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
     ///
     /// Stores the 8-bit in the specified lane of `vec` into linear memory at `ptr`
     #[doc(alias("v128.store8_lane"))]
-    V128Store8Lane { align: u32, offset: u32, lane: u8 },
+    V128Store8Lane { memarg: MemArg, lane: u8 },
     /// `v128.store16_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
     ///
     /// Stores the 16-bit in the specified lane of `vec` into linear memory at `ptr`
     #[doc(alias("v128.store16_lane"))]
-    V128Store16Lane { align: u32, offset: u32, lane: u8 },
+    V128Store16Lane { memarg: MemArg, lane: u8 },
     /// `v128.store32_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
     ///
     /// Stores the 32-bit in the specified lane of `vec` into linear memory at `ptr`
     #[doc(alias("v128.store32_lane"))]
-    V128Store32Lane { align: u32, offset: u32, lane: u8 },
+    V128Store32Lane { memarg: MemArg, lane: u8 },
     /// `v128.store64_lane`. Signature: `(vec: v128, ptr: i32) -> ()`
     ///
     /// Stores the 64-bit in the specified lane of `vec` into linear memory at `ptr`
     #[doc(alias("v128.store64_lane"))]
-    V128Store64Lane { align: u32, offset: u32, lane: u8 },
+    V128Store64Lane { memarg: MemArg, lane: u8 },
 
     /// `v128.const`. Signature: `() -> (v128)`
     ///
@@ -2458,98 +2515,31 @@ impl Instruction {
             TableGrow(_) => Extended(0xFCu8, 15u32),
             TableSize(_) => Extended(0xFCu8, 16u32),
             TableFill(_) => Extended(0xFCu8, 17u32),
-            I32Load {
-                align: _,
-                offset: _,
-            } => Single(0x28),
-            I64Load {
-                align: _,
-                offset: _,
-            } => Single(0x29),
-            F32Load {
-                align: _,
-                offset: _,
-            } => Single(0x2A),
-            F64Load {
-                align: _,
-                offset: _,
-            } => Single(0x2B),
-            I32LoadS8 {
-                align: _,
-                offset: _,
-            } => Single(0x2C),
-            I32LoadU8 {
-                align: _,
-                offset: _,
-            } => Single(0x2D),
-            I32LoadS16 {
-                align: _,
-                offset: _,
-            } => Single(0x2E),
-            I32LoadU16 {
-                align: _,
-                offset: _,
-            } => Single(0x2F),
-            I64LoadS8 {
-                align: _,
-                offset: _,
-            } => Single(0x30),
-            I64LoadU8 {
-                align: _,
-                offset: _,
-            } => Single(0x31),
-            I64LoadS16 {
-                align: _,
-                offset: _,
-            } => Single(0x32),
-            I64LoadU16 {
-                align: _,
-                offset: _,
-            } => Single(0x33),
-            I64LoadS32 {
-                align: _,
-                offset: _,
-            } => Single(0x34),
-            I64LoadU32 {
-                align: _,
-                offset: _,
-            } => Single(0x35),
-            I32Store {
-                align: _,
-                offset: _,
-            } => Single(0x36),
-            I64Store {
-                align: _,
-                offset: _,
-            } => Single(0x37),
-            F32Store {
-                align: _,
-                offset: _,
-            } => Single(0x38),
-            F64Store {
-                align: _,
-                offset: _,
-            } => Single(0x39),
-            I32StoreI8 {
-                align: _,
-                offset: _,
-            } => Single(0x3A),
-            I32StoreI16 {
-                align: _,
-                offset: _,
-            } => Single(0x3B),
-            I64StoreI8 {
-                align: _,
-                offset: _,
-            } => Single(0x3C),
-            I64StoreI16 {
-                align: _,
-                offset: _,
-            } => Single(0x3D),
-            I64StoreI32 {
-                align: _,
-                offset: _,
-            } => Single(0x3E),
+
+            I32Load(_) => Single(0x28),
+            I64Load(_) => Single(0x29),
+            F32Load(_) => Single(0x2A),
+            F64Load(_) => Single(0x2B),
+            I32LoadS8(_) => Single(0x2C),
+            I32LoadU8(_) => Single(0x2D),
+            I32LoadS16(_) => Single(0x2E),
+            I32LoadU16(_) => Single(0x2F),
+            I64LoadS8(_) => Single(0x30),
+            I64LoadU8(_) => Single(0x31),
+            I64LoadS16(_) => Single(0x32),
+            I64LoadU16(_) => Single(0x33),
+            I64LoadS32(_) => Single(0x34),
+            I64LoadU32(_) => Single(0x35),
+            I32Store(_) => Single(0x36),
+            I64Store(_) => Single(0x37),
+            F32Store(_) => Single(0x38),
+            F64Store(_) => Single(0x39),
+            I32StoreI8(_) => Single(0x3A),
+            I32StoreI16(_) => Single(0x3B),
+            I64StoreI8(_) => Single(0x3C),
+            I64StoreI16(_) => Single(0x3D),
+            I64StoreI32(_) => Single(0x3E),
+
             MemorySize => Single(0x3F),
             MemoryGrow => Single(0x40),
             MemoryInit(_) => Extended(0xFC, 8),
@@ -2696,102 +2686,28 @@ impl Instruction {
             U64SaturatingTruncateF32 => Extended(0xFC, 5),
             S64SaturatingTruncateF64 => Extended(0xFC, 6),
             U64SaturatingTruncateF64 => Extended(0xFC, 7),
-            V128Load {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 0),
-            V128LoadS8x8 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 1),
-            V128LoadU8x8 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 2),
-            V128LoadS16x4 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 3),
-            V128LoadU16x4 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 4),
-            V128LoadS32x2 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 5),
-            V128LoadU32x2 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 6),
-            V128LoadSplatI8 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 7),
-            V128LoadSplatI16 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 8),
-            V128LoadSplatI32 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 9),
-            V128LoadSplatI64 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 10),
-            V128LoadZeroI32 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 92),
-            V128LoadZeroI64 {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 93),
-            V128Store {
-                align: _,
-                offset: _,
-            } => Extended(0xFD, 11),
-            V128Load8Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 84),
-            V128Load16Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 85),
-            V128Load32Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 86),
-            V128Load64Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 87),
-            V128Store8Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 88),
-            V128Store16Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 89),
-            V128Store32Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 90),
-            V128Store64Lane {
-                align: _,
-                offset: _,
-                lane: _,
-            } => Extended(0xFD, 91),
+            V128Load(_) => Extended(0xFD, 0),
+            V128LoadS8x8(_) => Extended(0xFD, 1),
+            V128LoadU8x8(_) => Extended(0xFD, 2),
+            V128LoadS16x4(_) => Extended(0xFD, 3),
+            V128LoadU16x4(_) => Extended(0xFD, 4),
+            V128LoadS32x2(_) => Extended(0xFD, 5),
+            V128LoadU32x2(_) => Extended(0xFD, 6),
+            V128LoadSplatI8(_) => Extended(0xFD, 7),
+            V128LoadSplatI16(_) => Extended(0xFD, 8),
+            V128LoadSplatI32(_) => Extended(0xFD, 9),
+            V128LoadSplatI64(_) => Extended(0xFD, 10),
+            V128LoadZeroI32(_) => Extended(0xFD, 92),
+            V128LoadZeroI64(_) => Extended(0xFD, 93),
+            V128Store(_) => Extended(0xFD, 11),
+            V128Load8Lane { memarg: _, lane: _ } => Extended(0xFD, 84),
+            V128Load16Lane { memarg: _, lane: _ } => Extended(0xFD, 85),
+            V128Load32Lane { memarg: _, lane: _ } => Extended(0xFD, 86),
+            V128Load64Lane { memarg: _, lane: _ } => Extended(0xFD, 87),
+            V128Store8Lane { memarg: _, lane: _ } => Extended(0xFD, 88),
+            V128Store16Lane { memarg: _, lane: _ } => Extended(0xFD, 89),
+            V128Store32Lane { memarg: _, lane: _ } => Extended(0xFD, 90),
+            V128Store64Lane { memarg: _, lane: _ } => Extended(0xFD, 91),
             V128Const(_) => Extended(0xFD, 12),
             I8x16Shuffle { lanes: _ } => Extended(0xFD, 13),
             S8x16ExtractLane { lane: _ } => Extended(0xFD, 21),
@@ -3047,29 +2963,12 @@ impl WasmEncode for Instruction {
                 elem_index,
             } => table_index.size() + elem_index.size(),
             ElemDrop(elem_index) => elem_index.size(),
-            I32Load { align, offset }
-            | I64Load { align, offset }
-            | F32Load { align, offset }
-            | F64Load { align, offset }
-            | I32LoadS8 { align, offset }
-            | I32LoadU8 { align, offset }
-            | I32LoadS16 { align, offset }
-            | I32LoadU16 { align, offset }
-            | I64LoadS8 { align, offset }
-            | I64LoadU8 { align, offset }
-            | I64LoadS16 { align, offset }
-            | I64LoadU16 { align, offset }
-            | I64LoadS32 { align, offset }
-            | I64LoadU32 { align, offset }
-            | I32Store { align, offset }
-            | I64Store { align, offset }
-            | F32Store { align, offset }
-            | F64Store { align, offset }
-            | I32StoreI8 { align, offset }
-            | I32StoreI16 { align, offset }
-            | I64StoreI8 { align, offset }
-            | I64StoreI16 { align, offset }
-            | I64StoreI32 { align, offset } => align.size() + offset.size(),
+            I32Load(memarg) | I64Load(memarg) | F32Load(memarg) | F64Load(memarg)
+            | I32LoadS8(memarg) | I32LoadU8(memarg) | I32LoadS16(memarg) | I32LoadU16(memarg)
+            | I64LoadS8(memarg) | I64LoadU8(memarg) | I64LoadS16(memarg) | I64LoadU16(memarg)
+            | I64LoadS32(memarg) | I64LoadU32(memarg) | I32Store(memarg) | I64Store(memarg)
+            | F32Store(memarg) | F64Store(memarg) | I32StoreI8(memarg) | I32StoreI16(memarg)
+            | I64StoreI8(memarg) | I64StoreI16(memarg) | I64StoreI32(memarg) => memarg.size(),
             MemorySize => 1,
             MemoryGrow => 1,
             MemoryInit(data_idx) => data_idx.size(),
@@ -3081,60 +2980,28 @@ impl WasmEncode for Instruction {
             F32Const(x) => x.size(),
             F64Const(x) => x.size(),
 
-            V128Load { align, offset }
-            | V128LoadS8x8 { align, offset }
-            | V128LoadU8x8 { align, offset }
-            | V128LoadS16x4 { align, offset }
-            | V128LoadU16x4 { align, offset }
-            | V128LoadS32x2 { align, offset }
-            | V128LoadU32x2 { align, offset }
-            | V128LoadSplatI8 { align, offset }
-            | V128LoadSplatI16 { align, offset }
-            | V128LoadSplatI32 { align, offset }
-            | V128LoadSplatI64 { align, offset }
-            | V128LoadZeroI32 { align, offset }
-            | V128LoadZeroI64 { align, offset }
-            | V128Store { align, offset } => align.size() + offset.size(),
-            V128Load8Lane {
-                align,
-                offset,
-                lane: _,
-            }
-            | V128Load16Lane {
-                align,
-                offset,
-                lane: _,
-            }
-            | V128Load32Lane {
-                align,
-                offset,
-                lane: _,
-            }
-            | V128Load64Lane {
-                align,
-                offset,
-                lane: _,
-            }
-            | V128Store8Lane {
-                align,
-                offset,
-                lane: _,
-            }
-            | V128Store16Lane {
-                align,
-                offset,
-                lane: _,
-            }
-            | V128Store32Lane {
-                align,
-                offset,
-                lane: _,
-            }
-            | V128Store64Lane {
-                align,
-                offset,
-                lane: _,
-            } => 1 + align.size() + offset.size(),
+            V128Load(memarg)
+            | V128LoadS8x8(memarg)
+            | V128LoadU8x8(memarg)
+            | V128LoadS16x4(memarg)
+            | V128LoadU16x4(memarg)
+            | V128LoadS32x2(memarg)
+            | V128LoadU32x2(memarg)
+            | V128LoadSplatI8(memarg)
+            | V128LoadSplatI16(memarg)
+            | V128LoadSplatI32(memarg)
+            | V128LoadSplatI64(memarg)
+            | V128LoadZeroI32(memarg)
+            | V128LoadZeroI64(memarg)
+            | V128Store(memarg) => memarg.size(),
+            V128Load8Lane { memarg, lane: _ }
+            | V128Load16Lane { memarg, lane: _ }
+            | V128Load32Lane { memarg, lane: _ }
+            | V128Load64Lane { memarg, lane: _ }
+            | V128Store8Lane { memarg, lane: _ }
+            | V128Store16Lane { memarg, lane: _ }
+            | V128Store32Lane { memarg, lane: _ }
+            | V128Store64Lane { memarg, lane: _ } => 1 + memarg.size(),
             V128Const(_) => 18,
             I8x16Shuffle { lanes: _ } => 18,
             S8x16ExtractLane { lane: _ }
@@ -3201,29 +3068,12 @@ impl WasmEncode for Instruction {
                 elem_index,
             } => (table_index, elem_index).encode(v),
             ElemDrop(elem_index) => (elem_index).encode(v),
-            I32Load { align, offset }
-            | I64Load { align, offset }
-            | F32Load { align, offset }
-            | F64Load { align, offset }
-            | I32LoadS8 { align, offset }
-            | I32LoadU8 { align, offset }
-            | I32LoadS16 { align, offset }
-            | I32LoadU16 { align, offset }
-            | I64LoadS8 { align, offset }
-            | I64LoadU8 { align, offset }
-            | I64LoadS16 { align, offset }
-            | I64LoadU16 { align, offset }
-            | I64LoadS32 { align, offset }
-            | I64LoadU32 { align, offset }
-            | I32Store { align, offset }
-            | I64Store { align, offset }
-            | F32Store { align, offset }
-            | F64Store { align, offset }
-            | I32StoreI8 { align, offset }
-            | I32StoreI16 { align, offset }
-            | I64StoreI8 { align, offset }
-            | I64StoreI16 { align, offset }
-            | I64StoreI32 { align, offset } => (align, offset).encode(v),
+            I32Load(memarg) | I64Load(memarg) | F32Load(memarg) | F64Load(memarg)
+            | I32LoadS8(memarg) | I32LoadU8(memarg) | I32LoadS16(memarg) | I32LoadU16(memarg)
+            | I64LoadS8(memarg) | I64LoadU8(memarg) | I64LoadS16(memarg) | I64LoadU16(memarg)
+            | I64LoadS32(memarg) | I64LoadU32(memarg) | I32Store(memarg) | I64Store(memarg)
+            | F32Store(memarg) | F64Store(memarg) | I32StoreI8(memarg) | I32StoreI16(memarg)
+            | I64StoreI8(memarg) | I64StoreI16(memarg) | I64StoreI32(memarg) => memarg.encode(v),
             MemorySize => 0.encode(v),
             MemoryGrow => 0.encode(v),
             MemoryInit(data_idx) => (data_idx, 0u8).encode(v),
@@ -3234,60 +3084,28 @@ impl WasmEncode for Instruction {
             I64Const(x) => x.encode(v),
             F32Const(x) => x.encode(v),
             F64Const(x) => x.encode(v),
-            V128Load { align, offset }
-            | V128LoadS8x8 { align, offset }
-            | V128LoadU8x8 { align, offset }
-            | V128LoadS16x4 { align, offset }
-            | V128LoadU16x4 { align, offset }
-            | V128LoadS32x2 { align, offset }
-            | V128LoadU32x2 { align, offset }
-            | V128LoadSplatI8 { align, offset }
-            | V128LoadSplatI16 { align, offset }
-            | V128LoadSplatI32 { align, offset }
-            | V128LoadSplatI64 { align, offset }
-            | V128LoadZeroI32 { align, offset }
-            | V128LoadZeroI64 { align, offset }
-            | V128Store { align, offset } => (align, offset).encode(v),
-            V128Load8Lane {
-                align,
-                offset,
-                lane,
-            }
-            | V128Load16Lane {
-                align,
-                offset,
-                lane,
-            }
-            | V128Load32Lane {
-                align,
-                offset,
-                lane,
-            }
-            | V128Load64Lane {
-                align,
-                offset,
-                lane,
-            }
-            | V128Store8Lane {
-                align,
-                offset,
-                lane,
-            }
-            | V128Store16Lane {
-                align,
-                offset,
-                lane,
-            }
-            | V128Store32Lane {
-                align,
-                offset,
-                lane,
-            }
-            | V128Store64Lane {
-                align,
-                offset,
-                lane,
-            } => (align, offset, lane).encode(v),
+            V128Load(memarg)
+            | V128LoadS8x8(memarg)
+            | V128LoadU8x8(memarg)
+            | V128LoadS16x4(memarg)
+            | V128LoadU16x4(memarg)
+            | V128LoadS32x2(memarg)
+            | V128LoadU32x2(memarg)
+            | V128LoadSplatI8(memarg)
+            | V128LoadSplatI16(memarg)
+            | V128LoadSplatI32(memarg)
+            | V128LoadSplatI64(memarg)
+            | V128LoadZeroI32(memarg)
+            | V128LoadZeroI64(memarg)
+            | V128Store(memarg) => memarg.encode(v),
+            V128Load8Lane { memarg, lane }
+            | V128Load16Lane { memarg, lane }
+            | V128Load32Lane { memarg, lane }
+            | V128Load64Lane { memarg, lane }
+            | V128Store8Lane { memarg, lane }
+            | V128Store16Lane { memarg, lane }
+            | V128Store32Lane { memarg, lane }
+            | V128Store64Lane { memarg, lane } => (memarg, lane).encode(v),
             V128Const(bytes) => bytes.encode(v),
             I8x16Shuffle { lanes } => lanes.encode(v),
             S8x16ExtractLane { lane } => lane.encode(v),
@@ -3361,98 +3179,29 @@ impl WasmDecode for Instruction {
             Extended(0xFCu8, 16u32) => TableSize(u32::decode(buf)?),
             Extended(0xFCu8, 15u32) => TableGrow(u32::decode(buf)?),
             Extended(0xFCu8, 17u32) => TableFill(u32::decode(buf)?),
-            Single(0x28) => I32Load {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x29) => I64Load {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x2A) => F32Load {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x2B) => F64Load {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x2C) => I32LoadS8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x2D) => I32LoadU8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x2E) => I32LoadS16 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x2F) => I32LoadU16 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x30) => I64LoadS8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x31) => I64LoadU8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x32) => I64LoadS16 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x33) => I64LoadU16 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x34) => I64LoadS32 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x35) => I64LoadU32 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x36) => I32Store {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x37) => I64Store {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x38) => F32Store {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x39) => F64Store {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x3A) => I32StoreI8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x3B) => I32StoreI16 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x3C) => I64StoreI8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x3D) => I64StoreI16 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Single(0x3E) => I64StoreI32 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
+            Single(0x28) => I32Load(MemArg::decode(buf)?),
+            Single(0x29) => I64Load(MemArg::decode(buf)?),
+            Single(0x2A) => F32Load(MemArg::decode(buf)?),
+            Single(0x2B) => F64Load(MemArg::decode(buf)?),
+            Single(0x2C) => I32LoadS8(MemArg::decode(buf)?),
+            Single(0x2D) => I32LoadU8(MemArg::decode(buf)?),
+            Single(0x2E) => I32LoadS16(MemArg::decode(buf)?),
+            Single(0x2F) => I32LoadU16(MemArg::decode(buf)?),
+            Single(0x30) => I64LoadS8(MemArg::decode(buf)?),
+            Single(0x31) => I64LoadU8(MemArg::decode(buf)?),
+            Single(0x32) => I64LoadS16(MemArg::decode(buf)?),
+            Single(0x33) => I64LoadU16(MemArg::decode(buf)?),
+            Single(0x34) => I64LoadS32(MemArg::decode(buf)?),
+            Single(0x35) => I64LoadU32(MemArg::decode(buf)?),
+            Single(0x36) => I32Store(MemArg::decode(buf)?),
+            Single(0x37) => I64Store(MemArg::decode(buf)?),
+            Single(0x38) => F32Store(MemArg::decode(buf)?),
+            Single(0x39) => F64Store(MemArg::decode(buf)?),
+            Single(0x3A) => I32StoreI8(MemArg::decode(buf)?),
+            Single(0x3B) => I32StoreI16(MemArg::decode(buf)?),
+            Single(0x3C) => I64StoreI8(MemArg::decode(buf)?),
+            Single(0x3D) => I64StoreI16(MemArg::decode(buf)?),
+            Single(0x3E) => I64StoreI32(MemArg::decode(buf)?),
             Single(0x3F) => {
                 let mem_idx = u32::decode(buf)?;
                 if mem_idx != 0 {
@@ -3611,100 +3360,50 @@ impl WasmDecode for Instruction {
             Extended(0xFC, 5) => U64SaturatingTruncateF32,
             Extended(0xFC, 6) => S64SaturatingTruncateF64,
             Extended(0xFC, 7) => U64SaturatingTruncateF64,
-            Extended(0xFD, 0) => V128Load {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 1) => V128LoadS8x8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 2) => V128LoadU8x8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 3) => V128LoadS16x4 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 4) => V128LoadU16x4 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 5) => V128LoadS32x2 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 6) => V128LoadU32x2 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 7) => V128LoadSplatI8 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 8) => V128LoadSplatI16 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 9) => V128LoadSplatI32 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 10) => V128LoadSplatI64 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 92) => V128LoadZeroI32 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 93) => V128LoadZeroI64 {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
-            Extended(0xFD, 11) => V128Store {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
-            },
+            Extended(0xFD, 0) => V128Load(MemArg::decode(buf)?),
+            Extended(0xFD, 1) => V128LoadS8x8(MemArg::decode(buf)?),
+            Extended(0xFD, 2) => V128LoadU8x8(MemArg::decode(buf)?),
+            Extended(0xFD, 3) => V128LoadS16x4(MemArg::decode(buf)?),
+            Extended(0xFD, 4) => V128LoadU16x4(MemArg::decode(buf)?),
+            Extended(0xFD, 5) => V128LoadS32x2(MemArg::decode(buf)?),
+            Extended(0xFD, 6) => V128LoadU32x2(MemArg::decode(buf)?),
+            Extended(0xFD, 7) => V128LoadSplatI8(MemArg::decode(buf)?),
+            Extended(0xFD, 8) => V128LoadSplatI16(MemArg::decode(buf)?),
+            Extended(0xFD, 9) => V128LoadSplatI32(MemArg::decode(buf)?),
+            Extended(0xFD, 10) => V128LoadSplatI64(MemArg::decode(buf)?),
+            Extended(0xFD, 92) => V128LoadZeroI32(MemArg::decode(buf)?),
+            Extended(0xFD, 93) => V128LoadZeroI64(MemArg::decode(buf)?),
+            Extended(0xFD, 11) => V128Store(MemArg::decode(buf)?),
             Extended(0xFD, 84) => V128Load8Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 85) => V128Load16Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 86) => V128Load32Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 87) => V128Load64Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 88) => V128Store8Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 89) => V128Store16Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 90) => V128Store32Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 91) => V128Store64Lane {
-                align: u32::decode(buf)?,
-                offset: u32::decode(buf)?,
+                memarg: MemArg::decode(buf)?,
                 lane: u8::decode(buf)?,
             },
             Extended(0xFD, 12) => V128Const(<[u8; 16]>::decode(buf)?),
