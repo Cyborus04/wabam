@@ -541,6 +541,12 @@ impl WasmDecode for f64 {
     }
 }
 
+impl<A: WasmDecode, B: WasmDecode> WasmDecode for (A, B) {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        Ok((A::decode(buf)?, B::decode(buf)?))
+    }
+}
+
 impl<T: WasmDecode> WasmDecode for Vec<T> {
     fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let len = u32::decode(buf)? as usize;
