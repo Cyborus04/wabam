@@ -64,6 +64,11 @@ impl NameSection {
             data,
         }
     }
+
+    pub fn from_custom(custom: &[u8]) -> Result<NameSection, crate::Error> {
+        let mut buf = Buf::new(custom);
+        Self::decode(&mut buf).map_err(|e| e.at(&buf))
+    }
 }
 
 impl WasmEncode for NameSection {
@@ -97,5 +102,36 @@ impl WasmEncode for NameSection {
             (self.local_names.size() as u32).encode(v);
             self.local_names.encode(v);
         }
+    }
+}
+
+impl WasmDecode for NameSection {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let mut module_name = None;
+        let mut function_names = Vec::new();
+        let mut local_names = Vec::new();
+        while !buf.exhausted() {
+            let discriminant = u8::decode(buf)?;
+            match discriminant {
+                0 => {
+                    let _ = u32::decode(buf)?;
+                    module_name = Some(String::decode(buf)?)
+                },
+                1 => {
+                    let _ = u32::decode(buf)?;
+                    function_names = Vec::<(u32, String)>::decode(buf)?
+                },
+                2 => {
+                    let _ = u32::decode(buf)?;
+                    local_names = Vec::<(u32, Vec<(u32, String)>)>::decode(buf)?
+                },
+                _ => return Err(ErrorKind::InvalidDiscriminant(discriminant)),
+            }
+        }
+        Ok(Self {
+            module_name,
+            function_names,
+            local_names,
+        })
     }
 }
