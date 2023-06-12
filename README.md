@@ -17,14 +17,12 @@ module.types = vec![
 ];
 
 // Import WASI's `fd_write`, to print to the terminal
-let fd_write = wabam::interface::Import {
+let fd_write = wabam::interface::FuncImport {
     module: "wasi_snapshot_preview1".into(),
     name: "fd_write".into(),
-    desc: wabam::interface::ImportDesc::Func {
-        type_idx: 1, // types[1], see above
-    }
+    type_idx: 1, // types[1], see above
 };
-module.imports.push(fd_write);
+module.imports.functions.push(fd_write);
 
 // Define memory
 let memory = wabam::Limit {
@@ -48,7 +46,7 @@ let body = wabam::instrs!(
     (i32.const 0) // Where the `(ptr, len)` pair is
     (i32.const { text_ptr })
     (i32.store) // Write ptr
-
+    
     (i32.const 0) // Where the `(ptr, len)` pair is
     (i32.const { text.len() as i32 })
     (i32.store offset=4) // Write len
@@ -72,20 +70,16 @@ module.functions.push(func);
 // Export the start function
 let func_export = wabam::interface::Export {
     name: "_start".into(),
-    desc: wabam::interface::ExportDesc::Func {
-        func_idx: 1, // this is where that's important
-    }
+    idx: 1, // this is where that's important
 };
 
 // Export memory
 let mem_export = wabam::interface::Export {
     name: "memory".into(),
-    desc: wabam::interface::ExportDesc::Memory {
-        mem_idx: 0,
-    }
+    idx: 0,
 };
-module.exports.push(func_export);
-module.exports.push(mem_export);
+module.exports.functions.push(func_export);
+module.exports.memories.push(mem_export);
 
 let output = module.build();
 
