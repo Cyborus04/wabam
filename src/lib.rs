@@ -11,14 +11,12 @@
 //! ];
 //!
 //! // Import WASI's `fd_write`, to print to the terminal
-//! let fd_write = wabam::interface::Import {
+//! let fd_write = wabam::interface::FuncImport {
 //!     module: "wasi_snapshot_preview1".into(),
 //!     name: "fd_write".into(),
-//!     desc: wabam::interface::ImportDesc::Func {
-//!         type_idx: 1, // types[1], see above
-//!     }
+//!     type_idx: 1, // types[1], see above
 //! };
-//! module.imports.push(fd_write);
+//! module.imports.functions.push(fd_write);
 //!
 //! // Define memory
 //! let memory = wabam::Limit {
@@ -66,20 +64,16 @@
 //! // Export the start function
 //! let func_export = wabam::interface::Export {
 //!     name: "_start".into(),
-//!     desc: wabam::interface::ExportDesc::Func {
-//!         func_idx: 1, // this is where that's important
-//!     }
+//!     idx: 1, // this is where that's important
 //! };
 //!
 //! // Export memory
 //! let mem_export = wabam::interface::Export {
 //!     name: "memory".into(),
-//!     desc: wabam::interface::ExportDesc::Memory {
-//!         mem_idx: 0,
-//!     }
+//!     idx: 0,
 //! };
-//! module.exports.push(func_export);
-//! module.exports.push(mem_export);
+//! module.exports.functions.push(func_export);
+//! module.exports.memories.push(mem_export);
 //!
 //! let output = module.build();
 //!
@@ -182,7 +176,7 @@ const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 /// Creating a simple `add.wasm`
 ///
 /// ```
-/// # use wabam::{func_type, instrs, interface::{Export, ExportDesc}, functions::Function, Module};
+/// # use wabam::{func_type, instrs, interface::{Export}, functions::Function, Module};
 /// let mut module = Module::default();
 ///
 /// let fn_type = func_type!((param i32 i32) (result i32));
@@ -203,11 +197,9 @@ const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 ///
 /// let export = Export {
 ///     name: "add".into(),
-///     desc: ExportDesc::Func {
-///         func_idx: 0,
-///     }
+///     idx: 0,
 /// };
-/// module.exports.push(export);
+/// module.exports.functions.push(export);
 ///
 /// let wasm = module.build();
 ///
@@ -239,18 +231,18 @@ const HEADER: [u8; 8] = *b"\x00asm\x01\x00\x00\x00";
 /// let module = Module::load(&bytes).unwrap();
 ///
 /// assert_eq!(module.functions.len(), 1);
-/// assert_eq!(module.exports[0].name, "add");
+/// assert_eq!(module.exports.functions[0].name, "add");
 /// ```
 #[derive(PartialEq, Debug, Clone)]
 pub struct Module {
     pub custom_sections: Vec<CustomSection>,
     pub types: Vec<FuncType>,
-    pub imports: Vec<Import>,
+    pub imports: Imports,
     pub functions: Vec<Function>,
     pub tables: Vec<TableType>,
     pub memories: Vec<Limit>,
     pub globals: Vec<Global>,
-    pub exports: Vec<Export>,
+    pub exports: Exports,
     pub start: Option<u32>,
     pub elems: Vec<Element>,
     pub datas: Vec<Data>,
@@ -260,12 +252,12 @@ impl Module {
     pub const EMPTY: Self = Self {
         custom_sections: Vec::new(),
         types: Vec::new(),
-        imports: Vec::new(),
+        imports: Imports::empty(),
         functions: Vec::new(),
         tables: Vec::new(),
         memories: Vec::new(),
         globals: Vec::new(),
-        exports: Vec::new(),
+        exports: Exports::empty(),
         start: None,
         elems: Vec::new(),
         datas: Vec::new(),
@@ -321,12 +313,12 @@ impl Module {
                     .custom_sections
                     .push(load_section::<CustomSection>(section)?),
                 1 => module.types = load_section::<Vec<FuncType>>(section)?,
-                2 => module.imports = load_section::<Vec<Import>>(section)?,
+                2 => module.imports = load_section::<Imports>(section)?,
                 3 => functions = Some(section),
                 4 => module.tables = load_section::<Vec<TableType>>(section)?,
                 5 => module.memories = load_section::<Vec<Limit>>(section)?,
                 6 => module.globals = load_section::<Vec<Global>>(section)?,
-                7 => module.exports = load_section::<Vec<Export>>(section)?,
+                7 => module.exports = load_section::<Exports>(section)?,
                 8 => module.start = Some(u32::decode(&mut section).map_err(|e| e.at(buf))?),
                 9 => module.elems = load_section::<Vec<Element>>(section)?,
                 10 => code = Some(section),
@@ -663,10 +655,13 @@ mod tests {
                 .into(),
             }],
 
-            exports: vec![Export {
-                name: "fac".into(),
-                desc: ExportDesc::Func { func_idx: 0 },
-            }],
+            exports: Exports {
+                functions: vec![Export {
+                    name: "fac".into(),
+                    idx: 0,
+                }],
+                ..Default::default()
+            },
 
             ..Default::default()
         };
