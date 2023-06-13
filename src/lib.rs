@@ -263,6 +263,10 @@ impl Module {
         datas: Vec::new(),
     };
 
+    pub const fn empty() -> Self {
+        Self::EMPTY
+    }
+
     /// Assembles the module into the wasm binary format.
     pub fn build(&self) -> Vec<u8> {
         let mut v = Vec::with_capacity(self.size());
