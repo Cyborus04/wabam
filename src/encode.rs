@@ -1,4 +1,4 @@
-use std::mem::MaybeUninit;
+use std::{mem::MaybeUninit, collections::BTreeMap};
 
 pub(crate) trait WasmEncode {
     fn size(&self) -> usize;
@@ -102,6 +102,19 @@ impl WasmEncode for String {
 
     fn encode(&self, v: &mut Vec<u8>) {
         self.as_str().encode(v)
+    }
+}
+
+impl<K: WasmEncode, V: WasmEncode> WasmEncode for BTreeMap<K, V> {
+    fn size(&self) -> usize {
+        (self.len() as u32).size() + self.iter().map(|x| x.size()).sum::<usize>()
+    }
+
+    fn encode(&self, v: &mut Vec<u8>) {
+        (self.len() as u32).encode(v);
+        for i in self {
+            i.encode(v)
+        }
     }
 }
 
@@ -358,6 +371,8 @@ pub enum ErrorKind {
     InvalidInstruction(u8, Option<u32>),
     /// Memory index other than 0 was used
     MemIndexOutOfBounds(u32),
+    /// Something that should not appear more than once, did.
+    DuplicateItem,
 }
 
 impl ErrorKind {
@@ -405,6 +420,7 @@ impl std::fmt::Display for ErrorKind {
             ErrorKind::MemIndexOutOfBounds(idx) => {
                 write!(f, "memory idx {idx} is greater than zero")
             }
+            ErrorKind::DuplicateItem => write!(f, "duplicate item")
         }
     }
 }
@@ -562,6 +578,22 @@ impl WasmDecode for String {
     fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let s = String::from_utf8(Vec::<u8>::decode(buf)?)?;
         Ok(s)
+    }
+}
+
+impl<K: WasmDecode + Ord, V: WasmDecode> WasmDecode for BTreeMap<K, V> {
+    fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
+        let len = u32::decode(buf)? as usize;
+        let mut map = BTreeMap::new();
+        for _ in 0..len {
+            let k = K::decode(buf)?;
+            if map.contains_key(&k) {
+                return Err(ErrorKind::DuplicateItem)
+            }
+            let v = V::decode(buf)?;
+            map.insert(k, v);
+        }
+        Ok(map)
     }
 }
 

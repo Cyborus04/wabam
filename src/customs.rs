@@ -1,5 +1,7 @@
 //! Customs sections are named series of arbitrary bytes, often used for debug info.
 
+use std::collections::BTreeMap;
+
 use crate::{
     encode::{Buf, ErrorKind, WasmDecode},
     WasmEncode,
@@ -43,16 +45,16 @@ impl WasmDecode for CustomSection {
 ///
 /// let names = NameSection {
 ///     module_name: Some("add module".into()),
-///     function_names: vec![(0, "add".into())],
-///     local_names: vec![],
+///     function_names: [(0, "add".into())].into(),
+///     local_names: [].into(),
 /// };
 ///
 /// module.custom_sections.push(names.to_custom());
 /// ```
 pub struct NameSection {
     pub module_name: Option<String>,
-    pub function_names: Vec<(u32, String)>,
-    pub local_names: Vec<(u32, Vec<(u32, String)>)>,
+    pub function_names: BTreeMap<u32, String>,
+    pub local_names: BTreeMap<u32, BTreeMap<u32, String>>,
 }
 
 impl NameSection {
@@ -108,8 +110,8 @@ impl WasmEncode for NameSection {
 impl WasmDecode for NameSection {
     fn decode(buf: &mut Buf<'_>) -> Result<Self, ErrorKind> {
         let mut module_name = None;
-        let mut function_names = Vec::new();
-        let mut local_names = Vec::new();
+        let mut function_names = BTreeMap::new();
+        let mut local_names = BTreeMap::new();
         while !buf.exhausted() {
             let discriminant = u8::decode(buf)?;
             match discriminant {
@@ -119,11 +121,11 @@ impl WasmDecode for NameSection {
                 },
                 1 => {
                     let _ = u32::decode(buf)?;
-                    function_names = Vec::<(u32, String)>::decode(buf)?
+                    function_names = BTreeMap::<u32, String>::decode(buf)?
                 },
                 2 => {
                     let _ = u32::decode(buf)?;
-                    local_names = Vec::<(u32, Vec<(u32, String)>)>::decode(buf)?
+                    local_names = BTreeMap::<u32, BTreeMap<u32, String>>::decode(buf)?
                 },
                 _ => return Err(ErrorKind::InvalidDiscriminant(discriminant)),
             }
