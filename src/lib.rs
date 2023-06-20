@@ -249,6 +249,9 @@ pub struct Module {
 }
 
 impl Module {
+    /// An entirely empty module.
+    /// 
+    /// Calling `Module::build` on this will just return the 8-byte header.
     pub const EMPTY: Self = Self {
         custom_sections: Vec::new(),
         types: Vec::new(),
@@ -262,6 +265,13 @@ impl Module {
         elems: Vec::new(),
         datas: Vec::new(),
     };
+
+    /// An entirely empty module.
+    /// 
+    /// Calling `Module::build` on this will just return the 8-byte header.
+    pub const fn empty() -> Self {
+        Self::EMPTY
+    }
 
     /// Assembles the module into the wasm binary format.
     pub fn build(&self) -> Vec<u8> {
