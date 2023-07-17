@@ -637,9 +637,8 @@ mod tests {
         assert_eq!(Module::EMPTY.build(), HEADER);
     }
 
-    #[test]
-    fn factorial() {
-        let module = Module {
+    fn make_factorial_module() -> Module {
+        Module {
             types: vec![FuncType {
                 inputs: vec![ValType::I64],
                 outputs: vec![ValType::I64],
@@ -674,8 +673,12 @@ mod tests {
             },
 
             ..Default::default()
-        };
+        }
+    }
 
+    #[test]
+    fn factorial() {
+        let module = make_factorial_module();
         let result = module.build();
 
         assert_eq!(result, include_bytes!("tests/fac.wasm"));
@@ -710,11 +713,10 @@ mod tests {
 
     #[test]
     fn read_factorial() {
-        let bytes = std::fs::read("./src/tests/fac.wasm").unwrap();
-        let module = Module::load(&bytes).unwrap();
-        assert_eq!(module.types.len(), 1);
-        assert_eq!(module.functions.len(), 1);
-        assert_eq!(module.exports.len(), 1);
+        let bytes = include_bytes!("tests/fac.wasm");
+        let module = Module::load(bytes).unwrap();
+        let expected = make_factorial_module();
+        assert_eq!(module, expected);
     }
 
     #[test]
